@@ -2,3 +2,4 @@ mcp[cli]>=2,<3
 sqlalchemy[asyncio] 
 asyncpg 
 python-dotenv
+psycopg[binary]

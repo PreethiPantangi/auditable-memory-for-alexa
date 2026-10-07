@@ -27,3 +27,5 @@ CREATE TABLE claims(
 	created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 	superseded_by_claim_id INTEGER REFERENCES claims(id)
 );
+
+CREATE UNIQUE INDEX unique_active_claim_per_category ON claims (user_id, category) WHERE status = 'ACTIVE';

@@ -6,6 +6,8 @@ from sqlalchemy import text
 
 from responseformat import success_response, error_response
 
+import uuid
+
 mcp = MCPServer("auditable-memory-for-alexa")
 
 @mcp.tool()
@@ -19,24 +21,30 @@ async def server_status() -> dict:
 
 
 @mcp.tool()
-async def recall(user_id: str, category: str) -> dict:
+async def recall(user_id: str, category: str, memory_key: str | None = None) -> dict:
     async with SessionLocal() as session:
         try:
-            result = await session.execute(
-                text("""
-                    SELECT id as claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id 
-                    FROM claims 
-                    WHERE user_id =:user_id AND 
-                    status = 'ACTIVE' AND 
-                    category = :category
-                    ORDER BY created_at desc;
-                """), {"user_id": user_id, "category": category}
-            )
+            query = """
+                        SELECT id as claim_id, user_id, category, value, source_type, 
+                        source_utterance, memory_key, status, created_at, superseded_by_claim_id 
+                        FROM claims 
+                        WHERE user_id =:user_id AND status = 'ACTIVE' 
+                        AND category = :category
+                    """
+            params = {"user_id": user_id, "category": category, "memory_key": memory_key}
+            
+            if memory_key is not None:
+                query += " AND memory_key = :memory_key"
+                params["memory_key"] = memory_key
 
-            row = result.mappings().one_or_none()
-            if row is None:
-                return error_response(code="NO_ACTIVE_CLAIM", message="No active claim exists for this category.")
-            return success_response(data=dict(row))
+            query += " ORDER BY created_at DESC"
+            result = await session.execute(text(query), params)
+
+            claims = [
+               dict(row)
+                for row in result.mappings().all()
+            ]
+            return success_response(data=claims)
         except Exception:
             await session.rollback()
             raise
@@ -45,26 +53,19 @@ async def recall(user_id: str, category: str) -> dict:
 async def remember(user_id: str, category: str, value: str, source_utterance: str) -> dict:
     async with SessionLocal() as session:
         try:
-            category_active_claims = await session.execute(
+            memory_key = str(uuid.uuid4())
+            
+            results = await session.execute(
                 text("""
-                    SELECT * FROM claims 
-                    WHERE user_id = :user_id AND category = :category AND status = 'ACTIVE'
-                """), {"user_id": user_id, "category": category}
+                    INSERT INTO claims (user_id, category, value, source_type, source_utterance, memory_key, status) 
+                    VALUES (:user_id, :category, :value, :source_type, :source_utterance, :memory_key, :status)
+                    RETURNING id as claim_id, user_id, category, value, source_type, source_utterance, memory_key, status, created_at, superseded_by_claim_id
+                """), {"user_id": user_id, "category": category, "value": value, "source_type": "EXPLICIT", "source_utterance": source_utterance, "memory_key": memory_key, "status": "ACTIVE"}
             )
-            row = category_active_claims.mappings().one_or_none()
-            if row is None:
-                results = await session.execute(
-                    text("""
-                        INSERT INTO claims (user_id, category, value, source_type, source_utterance, status) 
-                        VALUES (:user_id, :category, :value, :source_type, :source_utterance, :status)
-                        RETURNING id as claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id
-                    """), {"user_id": user_id, "category": category, "value": value, "source_type": "EXPLICIT", "source_utterance": source_utterance, "status": "ACTIVE"}
-                )
-                row = results.mappings().one()
-                await session.commit()
-                return success_response(data=dict(row))
-            else:
-                return error_response(code="ACTIVE_CLAIM_EXISTS", message="An active claim already exists, please correct memory")
+            row = results.mappings().one()
+            await session.commit()
+            return success_response(data=dict(row))
+            
         except Exception:
             await session.rollback()
             raise
@@ -90,78 +91,80 @@ async def explain(claim_id: int, user_id: str) -> dict:
             raise
 
 @mcp.tool()
-async def correct_memory(user_id: str, category: str, value: str, source_utterance: str) -> dict:
+async def correct_memory(user_id: str, category: str, value: str, source_utterance: str, memory_key: str) -> dict:
 
     async with SessionLocal() as session:
         try:
-            # 1. Find current active claim
             active_result = await session.execute(
                 text("""
-                    SELECT id FROM claims 
-                    WHERE user_id = :user_id AND category = :category 
-                    AND status = 'ACTIVE' FOR UPDATE
-                """), {"user_id": user_id, "category": category}
+                    SELECT id, category FROM claims
+                    WHERE user_id = :user_id 
+                    AND category = :category AND memory_key = :memory_key 
+                    AND status = 'ACTIVE'
+                    FOR UPDATE
+                """), {"user_id": user_id, "category": category, "memory_key": memory_key}
             )
 
             active_claim = active_result.mappings().one_or_none()
 
             if active_claim is None:
-                return error_response(
-                    code="NO_ACTIVE_CLAIM",
-                    message="No active claim exists for this category."
-                )
+                return error_response(code="NO_ACTIVE_CLAIM",message="No active claim found for this memory.")
 
             old_claim_id = active_claim["id"]
 
-            # 2. Temporarily supersede old claim
+            # 1: Supersede old claim.
             await session.execute(
                 text("""
-                    UPDATE claims SET status = 'SUPERSEDED' WHERE id = :old_claim_id
-                """), {"old_claim_id": old_claim_id}
+                    UPDATE claims
+                    SET status = 'SUPERSEDED'
+                    WHERE id = :old_claim_id
+                """),
+                {"old_claim_id": old_claim_id}
             )
 
-            # 3. Insert new active claim
-            insert_result = await session.execute(
+            # Step 2: Insert replacement with same memory_key.
+            result = await session.execute(
                 text("""
-                    INSERT INTO claims (user_id, category, value, source_type, source_utterance, status)
-                    VALUES (:user_id, :category, :value, 'EXPLICIT', :source_utterance, 'ACTIVE')
-                    RETURNING id AS claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id
-                """), {"user_id": user_id, "category": category, "value": value, "source_utterance": source_utterance}
+                    INSERT INTO claims (user_id, category, value, source_type, source_utterance, memory_key, status)
+                    VALUES (:user_id, :category, :value, 'EXPLICIT', :source_utterance, :memory_key, 'ACTIVE')
+                    RETURNING *
+                """), {"user_id": user_id, "category": category, "value": value, "source_utterance": source_utterance, "memory_key": memory_key}
             )
 
-            new_claim = dict(insert_result.mappings().one())
-            new_claim_id = new_claim["claim_id"]
+            new_claim = dict(result.mappings().one())
 
-            # 4. Link old claim to new claim
-            old_result = await session.execute(
+            # Step 3: Link old claim to new claim.
+            await session.execute(
                 text("""
                     UPDATE claims
-                    SET superseded_by_claim_id = :new_claim_id
-                    WHERE id = :old_claim_id
-                    RETURNING id AS claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id
-                """),{"new_claim_id": new_claim_id,"old_claim_id": old_claim_id}
+                    SET superseded_by_claim_id = :new_id
+                    WHERE id = :old_id
+                """), {"new_id": new_claim["id"], "old_id": old_claim_id}
             )
-
-            superseded_claim = dict(old_result.mappings().one())
 
             await session.commit()
 
-            return success_response(data={"new_claim": new_claim,"superseded_claim": superseded_claim})
+            return success_response(
+                data={
+                    "new_claim": new_claim,
+                    "superseded_claim_id": old_claim_id
+                }
+            )
 
         except Exception:
             await session.rollback()
             raise
 
 @mcp.tool()
-async def forget(user_id: str, category: str) -> dict:
+async def forget(user_id: str, category: str, memory_key: str) -> dict:
     async with SessionLocal() as session:
         try: 
             results = await session.execute(
                 text("""
                     UPDATE claims SET status = 'FORGOTTEN'
-                    WHERE user_id = :user_id AND category = :category AND status = 'ACTIVE'
+                    WHERE user_id = :user_id AND category = :category AND status = 'ACTIVE' AND memory_key = :memory_key
                     RETURNING id as claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id
-                """), {"user_id": user_id, "category": category}
+                """), {"user_id": user_id, "category": category, "memory_key": memory_key}
             )
             row = results.mappings().one_or_none()
             if row is None:
@@ -173,23 +176,34 @@ async def forget(user_id: str, category: str) -> dict:
             raise
 
 @mcp.tool()
-async def memory_history(user_id: str, category: str) -> dict:
+async def memory_history(user_id: str, category: str, memory_key: str | None = None) -> dict:
+
     async with SessionLocal() as session:
         try:
-            results = await session.execute(
-                text("""
-                    SELECT id as claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id 
-                    FROM claims 
-                    WHERE user_id =:user_id AND category = :category
-                    ORDER BY created_at desc;
-                """), {"user_id": user_id, "category": category}
-            )
-            rows = results.mappings().all()
-            return success_response(data=[dict(row) for row in rows])
+            query = """
+                SELECT id AS claim_id, user_id, category, value, source_type, source_utterance, status, memory_key, created_at, superseded_by_claim_id
+                FROM claims
+                WHERE user_id = :user_id
+                AND category = :category
+            """
+
+            params = {"user_id": user_id,"category": category}
+
+            if memory_key is not None:
+                query += " AND memory_key = :memory_key"
+                params["memory_key"] = memory_key
+
+            query += " ORDER BY created_at DESC"
+
+            result = await session.execute(text(query), params)
+
+            claims = [dict(row) for row in result.mappings().all()]
+
+            return success_response(data=claims)
+
         except Exception:
             await session.rollback()
             raise
-
 
 if __name__ == "__main__":
     

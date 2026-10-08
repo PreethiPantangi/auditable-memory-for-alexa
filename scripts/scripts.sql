@@ -28,4 +28,10 @@ CREATE TABLE claims(
 	superseded_by_claim_id INTEGER REFERENCES claims(id)
 );
 
-CREATE UNIQUE INDEX unique_active_claim_per_category ON claims (user_id, category) WHERE status = 'ACTIVE';
+ALTER TABLE claims ADD COLUMN memory_key TEXT NOT NULL;
+
+UPDATE claims SET memory_key = gen_random_uuid()::text WHERE memory_key IS NULL;
+
+DROP INDEX IF EXISTS unique_active_claim_per_category;
+
+CREATE UNIQUE INDEX one_active_claim_per_memory_key ON claims (user_id, category, memory_key) WHERE status = 'ACTIVE';

@@ -3,3 +3,6 @@ sqlalchemy[asyncio]
 asyncpg 
 python-dotenv
 psycopg[binary]
+mcp
+openai
+fastapi

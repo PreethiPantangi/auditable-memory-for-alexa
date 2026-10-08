@@ -90,12 +90,7 @@ async def explain(claim_id: int, user_id: str) -> dict:
             raise
 
 @mcp.tool()
-async def correct_memory(
-    user_id: str,
-    category: str,
-    value: str,
-    source_utterance: str
-) -> dict:
+async def correct_memory(user_id: str, category: str, value: str, source_utterance: str) -> dict:
 
     async with SessionLocal() as session:
         try:
@@ -156,6 +151,7 @@ async def correct_memory(
         except Exception:
             await session.rollback()
             raise
+
 @mcp.tool()
 async def forget(user_id: str, category: str) -> dict:
     async with SessionLocal() as session:

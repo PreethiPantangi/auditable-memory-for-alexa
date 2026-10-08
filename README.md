@@ -43,6 +43,26 @@ The goal is not just to give an assistant memory.
 
 The goal is to build **memory that can explain itself**.
 
+## Running the client
+
+Run the client as a module from the project root (the directory containing
+`models`, `enums`, and `client`):
+
+```powershell
+python -m client.orchestrator
+```
+
+To run the MCP client demo:
+
+```powershell
+python -m client.test_client
+```
+
+Running `python client/orchestrator.py` directly does not put the project root
+on Python's import path, so imports such as `from models.action import Action`
+cannot resolve. Install the dependencies from `requirements.txt` and configure
+`OPENAI_API_KEY` and `MCP_URL` in your environment or `.env` before running.
+
 ## High-Level Architecture
 
 ```text

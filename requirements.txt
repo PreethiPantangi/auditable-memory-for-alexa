@@ -6,3 +6,5 @@ psycopg[binary]
 mcp
 openai
 fastapi
+uvicorn
+pydantic

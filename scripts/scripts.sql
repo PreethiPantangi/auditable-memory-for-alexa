@@ -28,7 +28,7 @@ CREATE TABLE claims(
 	superseded_by_claim_id INTEGER REFERENCES claims(id)
 );
 
-ALTER TABLE claims ADD COLUMN memory_key TEXT NOT NULL;
+ALTER TABLE claims ADD COLUMN memory_key TEXT;
 
 UPDATE claims SET memory_key = gen_random_uuid()::text WHERE memory_key IS NULL;
 

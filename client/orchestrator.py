@@ -292,7 +292,10 @@ async def generate_natural_response(user_message: str, results: list[dict]) -> s
 
     return response.output_text
 
+
 async def handle_user_message(user_id: str, message: str):
+
+    # 1. Extract memory actions from the user message.
     response = client.responses.parse(
         model=MODEL,
         input=[
@@ -309,34 +312,83 @@ async def handle_user_message(user_id: str, message: str):
     )
 
     actions = response.output_parsed.actions
-
-    print(f"\nUSER MESSAGE: {message}")
-    print(f"EXTRACTED ACTIONS: {actions}")
-
     results = []
-    
-    
-    # No extracted actions does not mean no memory exists.
+
+    print("USER MESSAGE:", message)
+    print("EXTRACTED ACTIONS:", actions)
+
+    # 2. Handle messages without extracted memory actions.
     if not actions:
         print("NO ACTIONS EXTRACTED")
         print("NO MCP TOOLS EXECUTED")
 
-        natural_response = await generate_natural_response(user_message=message,results=[])
+        natural_response = await generate_natural_response(
+            user_message=message,
+            results=[]
+        )
 
         print(f"AI: {natural_response}")
 
-        return natural_response
+        return {
+            "message": natural_response,
+            "actions": []
+        }
 
-    # Execute each detected action.
+    # 3. Execute each extracted action.
     for action in actions:
 
-        print(f"ACTION: {action.intent.value}, " f"CATEGORY: {action.category.value}")
+        category = (
+            action.category.value
+            if action.category is not None
+            else None
+        )
 
+        print(
+            f"ACTION: {action.intent.value}, "
+            f"CATEGORY: {category}"
+        )
+
+        # Validate category before executing MCP operations.
+        if category is None:
+
+            result = {
+                "success": False,
+                "error": {
+                    "code": "CLARIFICATION_REQUIRED",
+                    "message": (
+                        "Which memory are you referring to? "
+                        "Please mention the preference or fact "
+                        "you want me to explain or modify."
+                    )
+                }
+            }
+
+            results.append({
+                "intent": action.intent.value,
+                "category": None,
+                "result": result
+            })
+
+            print(
+                "ACTION REQUIRES CLARIFICATION:",
+                json.dumps(result, indent=2)
+            )
+
+            continue
+
+        # Execute an action only when required information exists.
         try:
-            result = await execute_action(user_id=user_id,message=message,action=action)
+            result = await execute_action(
+                user_id=user_id,
+                message=message,
+                action=action
+            )
 
         except Exception as e:
-            print(f"MCP EXECUTION ERROR: "f"{type(e).__name__}: {e}")
+            print(
+                f"MCP EXECUTION ERROR: "
+                f"{type(e).__name__}: {e}"
+            )
 
             result = {
                 "success": False,
@@ -349,19 +401,27 @@ async def handle_user_message(user_id: str, message: str):
                 }
             }
 
-        print("RAW MCP RESULT:", json.dumps(result, indent=2, default=str))
+        print(
+            "RAW MCP RESULT:",
+            json.dumps(result, indent=2, default=str)
+        )
 
-        # Preserve the operation alongside its result.
+        # Preserve the intent and category for the frontend.
         results.append({
             "intent": action.intent.value,
-            "category": action.category.value,
+            "category": category,
             "result": result
         })
 
-    natural_response = await generate_natural_response(user_message=message,results=results)
+    # 4. Generate a natural-language response grounded in results.
+    natural_response = await generate_natural_response(
+        user_message=message,
+        results=results
+    )
 
     print(f"\nNATURAL RESPONSE: {natural_response}")
 
+    # 5. Return the response and structured MCP action results.
     return {
         "message": natural_response,
         "actions": results

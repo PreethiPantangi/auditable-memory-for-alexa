@@ -76,7 +76,7 @@ async def explain(claim_id: int, user_id: str) -> dict:
         try:
             results = await session.execute(
                 text("""
-                    SELECT id as claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id 
+                    SELECT id as claim_id, user_id, category, value, source_type, source_utterance, memory_key, status, created_at, superseded_by_claim_id 
                     FROM claims 
                     WHERE id =:claim_id AND user_id = :user_id;
                 """), {"claim_id": claim_id, "user_id": user_id}
@@ -146,8 +146,11 @@ async def correct_memory(user_id: str, category: str, value: str, source_utteran
 
             return success_response(
                 data={
-                    "new_claim": new_claim,
-                    "superseded_claim_id": old_claim_id
+                    "memory_key": memory_key,
+                    "claim_id": new_claim["id"],
+                    "new_claim_id": new_claim["id"],
+                    "superseded_claim_id": old_claim_id,
+                    "new_claim": new_claim
                 }
             )
 
@@ -163,7 +166,7 @@ async def forget(user_id: str, category: str, memory_key: str) -> dict:
                 text("""
                     UPDATE claims SET status = 'FORGOTTEN'
                     WHERE user_id = :user_id AND category = :category AND status = 'ACTIVE' AND memory_key = :memory_key
-                    RETURNING id as claim_id, user_id, category, value, source_type, source_utterance, status, created_at, superseded_by_claim_id
+                    RETURNING id as claim_id, user_id, category, value, source_type, source_utterance, memory_key, status, created_at, superseded_by_claim_id
                 """), {"user_id": user_id, "category": category, "memory_key": memory_key}
             )
             row = results.mappings().one_or_none()

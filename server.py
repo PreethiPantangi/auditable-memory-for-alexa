@@ -119,22 +119,39 @@ async def explain(claim_id: int, user_id: str) -> dict:
 
     async with SessionLocal() as session:
         try:
-            if validate_demo_user(user_id=user_id):
-                results = await session.execute(
-                    text("""
-                        SELECT id as claim_id, user_id, category, value, source_type, source_utterance, memory_key, status, created_at, superseded_by_claim_id 
-                        FROM claims 
-                        WHERE id =:claim_id AND user_id = :user_id;
-                    """),
-                    {"claim_id": claim_id, "user_id": user_id},
-                )
-                row = results.mappings().one_or_none()
-                if row is None:
-                    return error_response(
-                        code="CLAIM_NOT_FOUND", message="Claim not found"
-                    )
+            result = await session.execute(
+                text("""
+                    SELECT
+                        id AS claim_id,
+                        user_id,
+                        category,
+                        value,
+                        source_type,
+                        source_utterance,
+                        memory_key,
+                        status,
+                        created_at,
+                        superseded_by_claim_id
+                    FROM claims
+                    WHERE id = :claim_id
+                    AND user_id = :user_id
+                """),
+                {
+                    "claim_id": claim_id,
+                    "user_id": user_id,
+                },
+            )
 
-                return success_response(data=dict(row))
+            claim = result.mappings().one_or_none()
+
+            if claim is None:
+                return error_response(
+                    code="CLAIM_NOT_FOUND",
+                    message="Claim not found.",
+                )
+
+            return success_response(data=dict(claim))
+
         except SQLAlchemyError:
             await session.rollback()
             raise
@@ -260,8 +277,15 @@ async def forget(user_id: str, category: str, memory_key: str) -> dict:
 
 @mcp.tool()
 async def memory_history(
-    user_id: str, category: str, memory_key: str | None = None
+    user_id: str,
+    category: str,
+    memory_key: str | None = None,
 ) -> dict:
+
+    validation_error = validate_demo_user(user_id)
+
+    if validation_error is not None:
+        return validation_error
 
     async with SessionLocal() as session:
         try:

@@ -96,8 +96,8 @@ async def demo_login(
         key=COOKIE_NAME,
         value=session_token,
         httponly=True,
-        secure=COOKIE_SECURE,
-        samesite="lax",
+        secure=True,
+        samesite="none",
         max_age=SESSION_MAX_AGE,
         path="/",
     )
@@ -123,9 +123,9 @@ async def demo_logout(response: Response):
     response.delete_cookie(
         key=COOKIE_NAME,
         path="/",
-        samesite="lax",
-        secure=COOKIE_SECURE,
+        secure=True,
         httponly=True,
+        samesite="none",
     )
 
     return {"authenticated": False}

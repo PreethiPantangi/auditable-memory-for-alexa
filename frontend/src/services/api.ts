@@ -1,14 +1,14 @@
-
 import type { ChatResponse } from "../types/chat";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function sendMessage(
   userId: string,
-  message: string
+  message: string,
 ): Promise<ChatResponse> {
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: "POST",
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
@@ -19,9 +19,7 @@ export async function sendMessage(
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Request failed with status ${response.status}`
-    );
+    throw new Error(`Request failed with status ${response.status}`);
   }
 
   const result: unknown = await response.json();

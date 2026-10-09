@@ -1,5 +1,7 @@
-from pydantic import BaseModel
 from typing import Literal
+
+from pydantic import BaseModel
+
 
 class MemoryResolution(BaseModel):
     status: Literal["MATCHED", "NO_MATCH", "AMBIGUOUS"]

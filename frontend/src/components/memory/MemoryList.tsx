@@ -1,4 +1,3 @@
-
 import { useMemo, useState } from "react";
 import { Search, Database } from "lucide-react";
 import type { MemoryClaim } from "../../types/memory";
@@ -11,18 +10,13 @@ interface Props {
 
 type Filter = "ACTIVE" | "FORGOTTEN" | "ALL";
 
-export default function MemoryList({
-  memories,
-  selectedKey,
-  onSelect,
-}: Props) {
+export default function MemoryList({ memories, selectedKey, onSelect }: Props) {
   const [filter, setFilter] = useState<Filter>("ACTIVE");
   const [search, setSearch] = useState("");
 
   const filteredMemories = useMemo(() => {
     return memories.filter((memory) => {
-      const matchesStatus =
-        filter === "ALL" || memory.status === filter;
+      const matchesStatus = filter === "ALL" || memory.status === filter;
 
       const term = search.toLowerCase();
 
@@ -43,10 +37,7 @@ export default function MemoryList({
       </p>
 
       <div className="relative mt-5">
-        <Search
-          size={17}
-          className="absolute left-3 top-3 text-slate-400"
-        />
+        <Search size={17} className="absolute left-3 top-3 text-slate-400" />
         <input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -57,26 +48,24 @@ export default function MemoryList({
       </div>
 
       <div className="mt-4 flex gap-2">
-        {(["ACTIVE", "FORGOTTEN", "ALL"] as const).map(
-          (status) => (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              aria-pressed={filter === status}
-              className={`rounded-lg px-3 py-2 text-xs font-medium ${
-                filter === status
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-slate-100 text-slate-600"
-              }`}
-            >
-              {status === "ALL"
-                ? "All"
-                : status === "ACTIVE"
-                  ? "Active"
-                  : "Forgotten"}
-            </button>
-          )
-        )}
+        {(["ACTIVE", "FORGOTTEN", "ALL"] as const).map((status) => (
+          <button
+            key={status}
+            onClick={() => setFilter(status)}
+            aria-pressed={filter === status}
+            className={`rounded-lg px-3 py-2 text-xs font-medium ${
+              filter === status
+                ? "bg-blue-100 text-blue-700"
+                : "bg-slate-100 text-slate-600"
+            }`}
+          >
+            {status === "ALL"
+              ? "All"
+              : status === "ACTIVE"
+                ? "Active"
+                : "Forgotten"}
+          </button>
+        ))}
       </div>
 
       <div className="mt-5 space-y-3">
@@ -113,9 +102,7 @@ export default function MemoryList({
               </span>
             </div>
 
-            <p className="mt-2 text-sm text-slate-700">
-              {memory.value}
-            </p>
+            <p className="mt-2 text-sm text-slate-700">{memory.value}</p>
 
             <p className="mt-2 text-xs text-slate-400">
               {new Date(memory.created_at).toLocaleDateString()}

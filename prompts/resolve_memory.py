@@ -90,4 +90,3 @@ RESOLVE_MEMORY_PROMPT = """
             - "Change my treadmill distance to 3 miles."
             - "I live in Bellevue now."
         """
-            

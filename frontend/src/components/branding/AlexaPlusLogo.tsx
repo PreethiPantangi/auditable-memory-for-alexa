@@ -8,11 +8,7 @@ export default function AlexaPlusLogo() {
         </div>
 
         {/* smile underline */}
-        <svg
-          viewBox="0 0 120 26"
-          className="mt-1 h-5 w-23"
-          aria-hidden="true"
-        >
+        <svg viewBox="0 0 120 26" className="mt-1 h-5 w-23" aria-hidden="true">
           <path
             d="M8 8 C 28 25, 72 25, 104 10"
             fill="none"

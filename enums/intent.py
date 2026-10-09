@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class MemoryIntent(StrEnum):
     REMEMBER = "remember"
     RECALL = "recall"

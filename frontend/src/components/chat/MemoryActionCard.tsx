@@ -1,19 +1,16 @@
-
 import {
   CheckCircle2,
   AlertCircle,
   History,
   ArrowUpRight,
+  Info,
 } from "lucide-react";
 
 import type { ChatAction } from "../../types/chat";
 
 interface Props {
   action: ChatAction;
-  onViewMemory: (
-    memoryKey: string,
-    claimId?: string | null
-  ) => void;
+  onViewMemory: (memoryKey: string, claimId?: string | null) => void;
 }
 
 interface MemoryTarget {
@@ -26,24 +23,18 @@ const actionTitles: Record<string, string> = {
   remember: "Memory saved",
   recall: "Memory retrieved",
   correct_memory: "Memory updated",
-  forget: "Memory forgotten",
+  forget: "Memory deactivated",
   explain: "Memory source retrieved",
   memory_history: "Memory history retrieved",
 };
 
-function isRecord(
-  value: unknown
-): value is Record<string, unknown> {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    !Array.isArray(value)
-  );
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function readString(
   record: Record<string, unknown>,
-  key: string
+  key: string,
 ): string | null {
   const value = record[key];
 
@@ -59,17 +50,21 @@ function readString(
 }
 
 function unwrapData(data: unknown): unknown {
-  if (isRecord(data) && "data" in data) {
-    return data.data;
+  let current = data;
+
+  // Support nested MCP/API data wrappers.
+  for (let i = 0; i < 3; i++) {
+    if (!isRecord(current) || !("data" in current)) {
+      break;
+    }
+
+    current = current.data;
   }
 
-  return data;
+  return current;
 }
 
-function toMemoryTarget(
-  item: unknown,
-  intent: string
-): MemoryTarget | null {
+function toMemoryTarget(item: unknown, intent: string): MemoryTarget | null {
   if (!isRecord(item)) return null;
 
   const claim = isRecord(item.new_claim)
@@ -79,23 +74,18 @@ function toMemoryTarget(
       : item;
 
   const memoryKey =
-    readString(item, "memory_key") ??
-    readString(claim, "memory_key");
+    readString(item, "memory_key") ?? readString(claim, "memory_key");
 
   if (!memoryKey) return null;
 
   const claimId =
-    (intent === "correct_memory"
-      ? readString(item, "new_claim_id")
-      : null) ??
+    (intent === "correct_memory" ? readString(item, "new_claim_id") : null) ??
     readString(item, "claim_id") ??
     readString(claim, "claim_id") ??
     readString(claim, "id");
 
   const label =
-    readString(claim, "value") ??
-    readString(item, "value") ??
-    memoryKey;
+    readString(claim, "value") ?? readString(item, "value") ?? memoryKey;
 
   return {
     memoryKey,
@@ -104,15 +94,16 @@ function toMemoryTarget(
   };
 }
 
-function extractMemoryTargets(
-  data: unknown,
-  intent: string
-): MemoryTarget[] {
+function extractMemoryTargets(data: unknown, intent: string): MemoryTarget[] {
   const payload = unwrapData(data);
 
   const items: unknown[] = Array.isArray(payload)
     ? payload
-    : [payload];
+    : isRecord(payload) && Array.isArray(payload.memories)
+      ? payload.memories
+      : isRecord(payload) && Array.isArray(payload.claims)
+        ? payload.claims
+        : [payload];
 
   const targetMap = new Map<string, MemoryTarget>();
 
@@ -121,17 +112,18 @@ function extractMemoryTargets(
 
     if (!target) continue;
 
-    // One logical memory per button.
-    // Prefer the ACTIVE version when processing arrays.
     const existing = targetMap.get(target.memoryKey);
 
     if (!existing) {
-      targetMap.set(target.memoryKey, target);
+      targetMap.set(
+        target.memoryKey,
+        intent === "memory_history" ? { ...target, claimId: null } : target,
+      );
     } else if (intent === "memory_history") {
-      // A history result may contain multiple claim versions.
-      // Do not arbitrarily highlight a historical version.
+      // A history response may contain many versions.
+      // Do not highlight an arbitrary claim.
       targetMap.set(target.memoryKey, {
-        ...target,
+        ...existing,
         claimId: null,
       });
     }
@@ -140,84 +132,149 @@ function extractMemoryTargets(
   return Array.from(targetMap.values());
 }
 
-export default function MemoryActionCard({
-  action,
-  onViewMemory,
-}: Props) {
+export default function MemoryActionCard({ action, onViewMemory }: Props) {
   const intent = (action.intent ?? "").toLowerCase();
 
-  const success = action.result?.success === true;
+  const result = action.result;
+
+  const success = result?.success === true;
+
+  const errorCode = result?.error?.code ?? "";
 
   const isClarification =
-  ["CLARIFICATION_REQUIRED", "AMBIGUOUS_MEMORY"].includes(
-    action.result?.error?.code ?? ""
-  ) ||
-  intent === "clarification_required";
+    intent === "clarification_required" ||
+    ["CLARIFICATION_REQUIRED", "AMBIGUOUS_MEMORY"].includes(
+      errorCode.toUpperCase(),
+    );
+
+  const isRecall = intent === "recall";
+  const isForget = intent === "forget";
+
+  const payload = unwrapData(result?.data);
+
+  const isEmptyRecall =
+    isRecall &&
+    success &&
+    (payload === null ||
+      payload === undefined ||
+      (Array.isArray(payload) && payload.length === 0));
+
+  const recallFailed =
+    isRecall && result?.success === false && !isClarification;
+
+  const forgetSucceeded = isForget && success;
+
+  const forgetFailed =
+    isForget && result?.success === false && !isClarification;
+
+  const actionFailed = !success && !isClarification;
+
+  const isNeutral = isEmptyRecall;
 
   const title = isClarification
     ? "Clarification needed"
-    : success
-      ? actionTitles[intent] ??
-        "Memory operation completed"
-      : "Memory operation failed";
+    : isEmptyRecall
+      ? "No active memory found"
+      : recallFailed
+        ? "Unable to retrieve memory"
+        : forgetFailed
+          ? "Unable to forget memory"
+          : actionFailed
+            ? "Memory operation failed"
+            : (actionTitles[intent] ?? "Memory operation completed");
 
   const categoryLabel =
-    typeof action.category === "string" &&
-    action.category.trim()
+    typeof action.category === "string" && action.category.trim()
       ? action.category.replaceAll("_", " ")
       : "Memory not identified";
 
   const targets =
-    success && !isClarification
-      ? extractMemoryTargets(action.result?.data, intent)
+    success && !isClarification && !isEmptyRecall
+      ? extractMemoryTargets(result?.data, intent)
       : [];
 
+  const statusClasses = isClarification
+    ? "border-amber-200 bg-amber-50"
+    : actionFailed
+      ? "border-red-200 bg-red-50"
+      : isNeutral
+        ? "border-slate-200 bg-slate-50"
+        : "border-slate-200 bg-white";
+
   return (
-    <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+    <div
+      className={`mt-3 rounded-xl border p-3 ${statusClasses}`}
+      role="status"
+    >
       <div className="flex items-center gap-2">
         {isClarification ? (
-          <History size={18} className="text-amber-600" />
-        ) : success ? (
-          <CheckCircle2
+          <History
             size={18}
-            className="text-emerald-600"
+            className="shrink-0 text-amber-600"
+            aria-hidden="true"
           />
-        ) : (
+        ) : isNeutral ? (
+          <Info
+            size={18}
+            className="shrink-0 text-slate-500"
+            aria-hidden="true"
+          />
+        ) : actionFailed ? (
           <AlertCircle
             size={18}
-            className="text-red-600"
+            className="shrink-0 text-red-600"
+            aria-hidden="true"
+          />
+        ) : (
+          <CheckCircle2
+            size={18}
+            className="shrink-0 text-emerald-600"
+            aria-hidden="true"
           />
         )}
 
-        <span className="text-sm font-semibold text-slate-800">
-          {title}
-        </span>
+        <span className="text-sm font-semibold text-slate-800">{title}</span>
       </div>
 
-      <p className="mt-2 text-xs capitalize text-slate-500">
-        {categoryLabel}
-      </p>
+      <p className="mt-2 text-xs capitalize text-slate-500">{categoryLabel}</p>
 
+      {/* Clarification required */}
       {isClarification && (
-        <div className="mt-2 rounded-lg bg-amber-50 p-3">
+        <div className="mt-2 rounded-lg bg-amber-100/60 p-3">
           <p className="text-xs text-amber-900">
-            {action.result?.error?.message ??
-              "Please clarify which memory you mean."}
+            {result?.error?.message ?? "Please clarify which memory you mean."}
           </p>
+
           <p className="mt-1 text-xs text-amber-700">
             No memory was saved or changed.
           </p>
         </div>
       )}
 
-      {!success &&
-        !isClarification &&
-        action.result?.error && (
-          <p className="mt-2 text-xs text-red-600">
-            {action.result.error.message}
-          </p>
-        )}
+      {/* Empty recall */}
+      {isEmptyRecall && (
+        <p className="mt-2 text-xs text-slate-600">
+          No active memory matches this request.
+        </p>
+      )}
 
+      {/* Successful forget */}
+      {forgetSucceeded && (
+        <p className="mt-2 text-xs leading-5 text-slate-600">
+          This memory will no longer be used for active recall. Its history
+          remains available for auditing.
+        </p>
+      )}
+
+      {/* Failed operation */}
+      {actionFailed && (
+        <p className="mt-2 text-xs text-red-700">
+          {result?.error?.message ??
+            "The memory operation could not be completed."}
+        </p>
+      )}
+
+      {/* Memory history navigation */}
       {targets.length > 0 && (
         <div className="mt-3 space-y-2">
           {targets.length > 1 && (
@@ -230,24 +287,14 @@ export default function MemoryActionCard({
             <button
               key={target.memoryKey}
               type="button"
-              onClick={() =>
-                onViewMemory(
-                  target.memoryKey,
-                  target.claimId
-                )
-              }
-              className="flex w-full items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-700 hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-blue-600"
+              onClick={() => onViewMemory(target.memoryKey, target.claimId)}
+              className="flex w-full items-center justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-left text-xs font-medium text-blue-700 transition-colors hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             >
-              <span className="min-w-0 break-words">
-                {targets.length === 1
-                  ? "View memory history"
-                  : target.label}
+              <span className="min-w-0 wrap-break-word">
+                {targets.length === 1 ? "View memory history" : target.label}
               </span>
 
-              <ArrowUpRight
-                size={15}
-                className="shrink-0"
-              />
+              <ArrowUpRight size={15} className="shrink-0" aria-hidden="true" />
             </button>
           ))}
         </div>

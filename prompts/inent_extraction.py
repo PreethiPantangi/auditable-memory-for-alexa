@@ -1,5 +1,5 @@
-from enums.intent import MemoryIntent
 from enums.category import MemoryCategory
+from enums.intent import MemoryIntent
 
 
 def get_intent_extraction_prompt() -> str:
@@ -395,4 +395,3 @@ def get_intent_extraction_prompt() -> str:
 
                 The execution layer must request clarification before modifying any memory.
             """
-            

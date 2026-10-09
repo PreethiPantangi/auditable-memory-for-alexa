@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   Database,
@@ -32,9 +31,7 @@ function formatDate(value: string | null | undefined) {
 
   const date = new Date(value);
 
-  return Number.isNaN(date.getTime())
-    ? "Unknown date"
-    : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? "Unknown date" : date.toLocaleString();
 }
 
 export default function MemoryDetail({
@@ -44,12 +41,12 @@ export default function MemoryDetail({
   highlightedClaimId,
   navigationVersion,
 }: Props) {
-  const [historyResult, setHistoryResult] =
-    useState<HistoryResult | null>(null);
+  const [historyResult, setHistoryResult] = useState<HistoryResult | null>(
+    null,
+  );
 
   // 1. Declare memoryKey BEFORE using it.
-  const memoryKey =
-    selectedMemoryKey ?? memory?.memory_key ?? null;
+  const memoryKey = selectedMemoryKey ?? memory?.memory_key ?? null;
 
   // 2. Only display results for the selected memory.
   const isCurrentResult =
@@ -57,16 +54,11 @@ export default function MemoryDetail({
     historyResult.userId === userId &&
     historyResult.memoryKey === memoryKey;
 
-  const history: MemoryClaim[] = isCurrentResult
-    ? historyResult.history
-    : [];
+  const history: MemoryClaim[] = isCurrentResult ? historyResult.history : [];
 
-  const error = isCurrentResult
-    ? historyResult.error
-    : null;
+  const error = isCurrentResult ? historyResult.error : null;
 
-  const loading =
-    memoryKey !== null && !isCurrentResult;
+  const loading = memoryKey !== null && !isCurrentResult;
 
   // 3. Fetch asynchronously. No synchronous setState.
   useEffect(() => {
@@ -110,8 +102,7 @@ export default function MemoryDetail({
     history.find((claim) => claim.status === "ACTIVE") ??
     [...history].sort(
       (a, b) =>
-        new Date(b.created_at).getTime() -
-        new Date(a.created_at).getTime()
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
     )[0] ??
     (memory?.memory_key === memoryKey ? memory : null);
 
@@ -120,14 +111,11 @@ export default function MemoryDetail({
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex items-center gap-2">
           <Database size={19} className="text-blue-600" />
-          <h2 className="text-lg font-bold">
-            Memory Details
-          </h2>
+          <h2 className="text-lg font-bold">Memory Details</h2>
         </div>
 
         <p className="mt-3 text-sm text-slate-500">
-          Select a memory to inspect its source and
-          correction history.
+          Select a memory to inspect its source and correction history.
         </p>
       </section>
     );
@@ -137,16 +125,11 @@ export default function MemoryDetail({
     <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center gap-2">
         <Database size={19} className="text-blue-600" />
-        <h2 className="text-lg font-bold text-slate-900">
-          Memory Details
-        </h2>
+        <h2 className="text-lg font-bold text-slate-900">Memory Details</h2>
       </div>
 
       {loading && (
-        <p
-          role="status"
-          className="mt-4 text-sm text-slate-500"
-        >
+        <p role="status" className="mt-4 text-sm text-slate-500">
           Loading memory history...
         </p>
       )}
@@ -223,9 +206,7 @@ export default function MemoryDetail({
             </div>
 
             <div>
-              <dt className="font-medium text-slate-500">
-                Claim ID
-              </dt>
+              <dt className="font-medium text-slate-500">Claim ID</dt>
               <dd className="mt-1 break-all font-mono text-xs text-slate-700">
                 {currentClaim.claim_id}
               </dd>
@@ -244,9 +225,7 @@ export default function MemoryDetail({
         <div className="mb-4 flex items-center gap-2">
           <History size={18} className="text-blue-600" />
 
-          <h3 className="font-semibold text-slate-900">
-            Memory Evolution
-          </h3>
+          <h3 className="font-semibold text-slate-900">Memory Evolution</h3>
 
           <span className="ml-auto rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600">
             {history.length} versions

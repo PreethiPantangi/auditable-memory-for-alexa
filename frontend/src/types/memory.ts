@@ -1,7 +1,4 @@
-export type MemoryStatus =
-  | "ACTIVE"
-  | "SUPERSEDED"
-  | "FORGOTTEN";
+export type MemoryStatus = "ACTIVE" | "SUPERSEDED" | "FORGOTTEN";
 
 export interface MemoryClaim {
   claim_id: string;
@@ -51,7 +48,7 @@ export interface MemoryHistoryResponse {
 }
 
 export interface NavigationTarget {
-  memoryKey: string; 
-  claimId?: string | null; 
+  memoryKey: string;
+  claimId?: string | null;
   requestId: number;
 }

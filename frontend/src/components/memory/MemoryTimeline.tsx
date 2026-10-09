@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -33,9 +32,7 @@ function formatDate(value: string) {
 }
 
 function shortId(id: string) {
-  return id.length > 12
-    ? `${id.slice(0, 8)}...`
-    : id;
+  return id.length > 12 ? `${id.slice(0, 8)}...` : id;
 }
 
 const statusConfig = {
@@ -73,17 +70,13 @@ export default function MemoryTimeline({
 
   const sortedClaims = [...claims].sort(
     (a, b) =>
-      new Date(b.created_at).getTime() -
-      new Date(a.created_at).getTime()
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
   );
 
   // A correction relationship must be based on
   // superseded_by_claim_id, not simply timestamps.
   const claimMap = new Map(
-    sortedClaims.map((claim) => [
-      claim.claim_id,
-      claim,
-    ])
+    sortedClaims.map((claim) => [claim.claim_id, claim]),
   );
 
   const predecessors = new Map<string, MemoryClaim[]>();
@@ -91,59 +84,51 @@ export default function MemoryTimeline({
   for (const claim of sortedClaims) {
     if (!claim.superseded_by_claim_id) continue;
 
-    const existing =
-      predecessors.get(claim.superseded_by_claim_id) ?? [];
+    const existing = predecessors.get(claim.superseded_by_claim_id) ?? [];
 
-    predecessors.set(
-      claim.superseded_by_claim_id,
-      [...existing, claim]
-    );
+    predecessors.set(claim.superseded_by_claim_id, [...existing, claim]);
   }
 
-  
-useEffect(() => {
-  if (!highlightedClaimId) return;
+  useEffect(() => {
+    if (!highlightedClaimId) return;
 
-  let frame1 = 0;
-  let frame2 = 0;
+    let frame1 = 0;
+    let frame2 = 0;
 
-  frame1 = requestAnimationFrame(() => {
-    frame2 = requestAnimationFrame(() => {
-      const target = highlightedRef.current;
-      const container = document.getElementById(
-        "memory-ledger-scroll"
-      );
+    frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        const target = highlightedRef.current;
+        const container = document.getElementById("memory-ledger-scroll");
 
-      if (!target || !container) return;
+        if (!target || !container) return;
 
-      // Calculate the target's position relative
-      // to the scrollable ledger container.
-      // const targetRect = target.getBoundingClientRect();
-      // const containerRect = container.getBoundingClientRect();
+        // Calculate the target's position relative
+        // to the scrollable ledger container.
+        // const targetRect = target.getBoundingClientRect();
+        // const containerRect = container.getBoundingClientRect();
 
-      // const relativeTop =
-      //   targetRect.top -
-      //   containerRect.top +
-      //   container.scrollTop;
+        // const relativeTop =
+        //   targetRect.top -
+        //   containerRect.top +
+        //   container.scrollTop;
 
-      // const desiredScrollTop =
-      //   relativeTop -
-      //   container.clientHeight / 2 +
-      //   targetRect.height / 2;
+        // const desiredScrollTop =
+        //   relativeTop -
+        //   container.clientHeight / 2 +
+        //   targetRect.height / 2;
 
-      // container.scrollTo({
-      //   top: Math.max(0, desiredScrollTop),
-      //   behavior: "smooth",
-      // });
+        // container.scrollTo({
+        //   top: Math.max(0, desiredScrollTop),
+        //   behavior: "smooth",
+        // });
+      });
     });
-  });
 
-  return () => {
-    cancelAnimationFrame(frame1);
-    cancelAnimationFrame(frame2);
-  };
-}, [highlightedClaimId, navigationVersion, claims]);
-
+    return () => {
+      cancelAnimationFrame(frame1);
+      cancelAnimationFrame(frame2);
+    };
+  }, [highlightedClaimId, navigationVersion, claims]);
 
   function toggleExpanded(claimId: string) {
     setExpandedIds((previous) => {
@@ -167,10 +152,7 @@ useEffect(() => {
     );
   }
 
-  if (
-    new Set(sortedClaims.map((claim) => claim.memory_key))
-      .size > 1
-  ) {
+  if (new Set(sortedClaims.map((claim) => claim.memory_key)).size > 1) {
     return (
       <p role="alert" className="text-sm text-red-600">
         Cannot display timeline: mismatched memory keys.
@@ -179,38 +161,30 @@ useEffect(() => {
   }
 
   return (
-    <ol
-      className="space-y-0"
-      aria-label="Memory version timeline"
-    >
+    <ol className="space-y-0" aria-label="Memory version timeline">
       {sortedClaims.map((claim, index) => {
-        const config =
-          statusConfig[claim.status] ??
-          statusConfig.SUPERSEDED;
+        const config = statusConfig[claim.status] ?? statusConfig.SUPERSEDED;
 
         const StatusIcon = config.icon;
 
-        const isExpanded = expandedIds.has(claim.claim_id) || highlightedClaimId === claim.claim_id;
-
-        const isHighlighted =
+        const isExpanded =
+          expandedIds.has(claim.claim_id) ||
           highlightedClaimId === claim.claim_id;
 
-        const successor =
-          claim.superseded_by_claim_id
-            ? claimMap.get(
-                claim.superseded_by_claim_id
-              )
-            : undefined;
+        const isHighlighted = highlightedClaimId === claim.claim_id;
 
-        const previousVersions =
-          predecessors.get(claim.claim_id) ?? [];
+        const successor = claim.superseded_by_claim_id
+          ? claimMap.get(claim.superseded_by_claim_id)
+          : undefined;
+
+        const previousVersions = predecessors.get(claim.claim_id) ?? [];
 
         return (
           <li
-              key={claim.claim_id}
-              ref={isHighlighted ? highlightedRef : undefined}
-              className="relative flex gap-3 scroll-mt-6"
-            >
+            key={claim.claim_id}
+            ref={isHighlighted ? highlightedRef : undefined}
+            className="relative flex gap-3 scroll-mt-6"
+          >
             <div className="flex w-5 shrink-0 flex-col items-center">
               <div
                 className={`mt-5 h-3 w-3 shrink-0 rounded-full ring-4 ring-white ${config.dot}`}
@@ -281,57 +255,48 @@ useEffect(() => {
               {previousVersions.length > 0 && (
                 <div className="mt-2 text-xs text-slate-500">
                   Replaces:{" "}
-                  {previousVersions.map(
-                    (previous, i) => (
-                      <span key={previous.claim_id}>
-                        {i > 0 ? ", " : ""}
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setExpandedIds((current) => {
-                              const next = new Set(current);
-                              next.add(previous.claim_id);
-                              return next;
-                            })
-                          }
-                          className="font-mono text-blue-600 underline"
-                        >
-                          {shortId(previous.claim_id)}
-                        </button>
-                      </span>
-                    )
-                  )}
+                  {previousVersions.map((previous, i) => (
+                    <span key={previous.claim_id}>
+                      {i > 0 ? ", " : ""}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedIds((current) => {
+                            const next = new Set(current);
+                            next.add(previous.claim_id);
+                            return next;
+                          })
+                        }
+                        className="font-mono text-blue-600 underline"
+                      >
+                        {shortId(previous.claim_id)}
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
 
               {claim.status === "FORGOTTEN" && (
                 <p className="mt-3 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">
-                  Inactive memory retained in the audit
-                  history.
+                  Inactive memory retained in the audit history.
                 </p>
               )}
 
-              {claim.superseded_by_claim_id &&
-                !successor && (
-                  <p className="mt-2 text-xs text-amber-700">
-                    Linked replacement is not present in
-                    this history response.
-                  </p>
-                )}
+              {claim.superseded_by_claim_id && !successor && (
+                <p className="mt-2 text-xs text-amber-700">
+                  Linked replacement is not present in this history response.
+                </p>
+              )}
 
               <button
                 type="button"
-                onClick={() =>
-                  toggleExpanded(claim.claim_id)
-                }
+                onClick={() => toggleExpanded(claim.claim_id)}
                 aria-expanded={isExpanded}
                 aria-controls={`evidence-${claim.claim_id}`}
                 className="mt-4 flex w-full items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-600"
               >
                 <span>
-                  {isExpanded
-                    ? "Hide source evidence"
-                    : "View source evidence"}
+                  {isExpanded ? "Hide source evidence" : "View source evidence"}
                 </span>
 
                 {isExpanded ? (
@@ -372,36 +337,24 @@ useEffect(() => {
 
                   <dl className="space-y-2 text-xs">
                     <div>
-                      <dt className="text-slate-500">
-                        Source type
-                      </dt>
-                      <dd className="text-slate-800">
-                        {claim.source_type}
-                      </dd>
+                      <dt className="text-slate-500">Source type</dt>
+                      <dd className="text-slate-800">{claim.source_type}</dd>
                     </div>
 
                     <div>
-                      <dt className="text-slate-500">
-                        Category
-                      </dt>
-                      <dd className="text-slate-800">
-                        {claim.category}
-                      </dd>
+                      <dt className="text-slate-500">Category</dt>
+                      <dd className="text-slate-800">{claim.category}</dd>
                     </div>
 
                     <div>
-                      <dt className="text-slate-500">
-                        Memory key
-                      </dt>
+                      <dt className="text-slate-500">Memory key</dt>
                       <dd className="break-all font-mono text-slate-800">
                         {claim.memory_key}
                       </dd>
                     </div>
 
                     <div>
-                      <dt className="text-slate-500">
-                        Created at
-                      </dt>
+                      <dt className="text-slate-500">Created at</dt>
                       <dd className="text-slate-800">
                         {formatDate(claim.created_at)}
                       </dd>

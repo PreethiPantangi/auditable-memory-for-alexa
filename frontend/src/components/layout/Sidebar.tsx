@@ -1,9 +1,7 @@
-import {
-  MessageCircle,
-  Database,
-  ChefHat,
-} from "lucide-react";
+import { MessageCircle, Database, ChefHat } from "lucide-react";
 import AlexaPlusLogo from "../branding/AlexaPlusLogo";
+import { LogOut } from "lucide-react";
+import { logoutDemo } from "../../services/demoAuthApi";
 
 const navItems = [
   {
@@ -23,7 +21,19 @@ const navItems = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  onLogout: () => void;
+}
+export default function Sidebar({ onLogout }: SidebarProps) {
+  async function handleLogout() {
+    try {
+      await logoutDemo();
+      onLogout();
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  }
+
   return (
     <aside className="border-r border-slate-200 bg-white">
       <div className="flex h-full flex-col">
@@ -54,6 +64,14 @@ export default function Sidebar() {
             })}
           </ul>
         </nav>
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 focus-visible:outline-2 focus-visible:outline-blue-600"
+        >
+          <LogOut size={18} aria-hidden="true" />
+          <span>Log out</span>
+        </button>
       </div>
     </aside>
   );

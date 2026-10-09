@@ -1,4 +1,3 @@
-
 export interface ChatAction {
   intent: string;
   category: string | null;

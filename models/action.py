@@ -1,8 +1,9 @@
 from pydantic import BaseModel
 
-from enums.intent import MemoryIntent
 from enums.category import MemoryCategory
+from enums.intent import MemoryIntent
 from enums.scope import ExplainScope
+
 
 class Action(BaseModel):
     intent: MemoryIntent

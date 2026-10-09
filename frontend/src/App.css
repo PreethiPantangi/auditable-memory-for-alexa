@@ -167,7 +167,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: -4.5px;
     border: 5px solid transparent;
@@ -181,4 +181,23 @@
     right: 0;
     border-right-color: var(--border);
   }
+}
+
+.memory-action-card--neutral {
+  background: #f3f6fa;
+  border: 1px solid #dce3ed;
+  color: #475569;
+}
+
+.memory-action-card--error {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+}
+
+.forget-description {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #64748b;
 }

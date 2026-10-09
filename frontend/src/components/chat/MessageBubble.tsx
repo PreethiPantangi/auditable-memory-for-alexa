@@ -1,103 +1,99 @@
-
 import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { BrainCircuit } from "lucide-react";
+import { Bot, User } from "lucide-react";
 
-import type { ChatMessage } from "../../types/chat";
 import MemoryActionCard from "./MemoryActionCard";
 
-interface Props {
-  message: ChatMessage;
+import type { ChatAction } from "../../types/chat";
 
-  // F3: Navigate to the selected memory and claim
-  onViewMemory: (
-    memoryKey: string,
-    claimId?: string | null
-  ) => void;
+// Temporary test configuration.
+// Change to true to display a failed Forget action.
+const SHOW_FAILED_FORGET_TEST = false;
+
+// Remove this mock after testing.
+const failedForgetAction = {
+  intent: "forget",
+  category: "food_preference",
+  result: {
+    success: false,
+    error: {
+      code: "DATABASE_ERROR",
+      message: "Unable to deactivate memory. Please try again.",
+    },
+  },
+} as ChatAction;
+
+interface Message {
+  id: string | number;
+  role: "user" | "assistant";
+  content: string;
+  actions?: ChatAction[];
+}
+
+interface MessageBubbleProps {
+  message: Message;
+  onViewMemory: (memoryKey: string, claimId?: string | null) => void;
 }
 
 export default function MessageBubble({
   message,
   onViewMemory,
-}: Props) {
-  const isUser = message.role === "user";
+}: MessageBubbleProps) {
+  const isAssistant = message.role === "assistant";
 
   return (
     <div
-      className={`flex gap-3 ${
-        isUser ? "justify-end" : "justify-start"
+      className={`flex w-full gap-3 ${
+        isAssistant ? "justify-start" : "justify-end"
       }`}
     >
-      {!isUser && (
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-          <BrainCircuit size={19} />
+      {isAssistant && (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+          <Bot size={21} aria-hidden="true" />
         </div>
       )}
 
       <div
-        className={`min-w-0 max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-          isUser
-            ? "bg-blue-100 text-slate-900"
-            : "bg-slate-100 text-slate-800"
+        className={`max-w-[85%] rounded-2xl px-4 py-3 ${
+          isAssistant
+            ? "bg-slate-100 text-slate-900"
+            : "bg-blue-100 text-slate-900"
         }`}
       >
-        {isUser ? (
-          <p className="whitespace-pre-wrap">
-            {message.content}
-          </p>
-        ) : (
-          <div className="space-y-2 wrap-break-word">
-            <ReactMarkdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                p: ({ children }) => (
-                  <p>{children}</p>
-                ),
+        {/* Chat message */}
+        <div className="chat-markdown text-sm leading-6">
+          <ReactMarkdown>{message.content ?? ""}</ReactMarkdown>
+        </div>
 
-                strong: ({ children }) => (
-                  <strong className="font-semibold text-slate-900">
-                    {children}
-                  </strong>
-                ),
+        {/* Real API action cards */}
+        {isAssistant &&
+          message.actions?.map((action, index) => (
+            <MemoryActionCard
+              key={`${message.id}-action-${index}`}
+              action={action}
+              onViewMemory={onViewMemory}
+            />
+          ))}
 
-                ul: ({ children }) => (
-                  <ul className="list-disc space-y-1 pl-5">
-                    {children}
-                  </ul>
-                ),
+        {/* Development-only failed Forget test */}
+        {isAssistant && import.meta.env.DEV && SHOW_FAILED_FORGET_TEST && (
+          <div className="mt-3">
+            <p className="mb-2 text-xs font-semibold text-amber-700">
+              DEV TEST — Simulated failed Forget
+            </p>
 
-                ol: ({ children }) => (
-                  <ol className="list-decimal space-y-1 pl-5">
-                    {children}
-                  </ol>
-                ),
-
-                code: ({ children }) => (
-                  <code className="rounded bg-slate-200 px-1 py-0.5 font-mono text-xs break-all">
-                    {children}
-                  </code>
-                ),
-
-                blockquote: ({ children }) => (
-                  <blockquote className="border-l-4 border-blue-300 pl-3 italic text-slate-600">
-                    {children}
-                  </blockquote>
-                ),
-              }}
-            >
-              {message.content}
-            </ReactMarkdown>
+            <MemoryActionCard
+              action={failedForgetAction}
+              onViewMemory={onViewMemory}
+            />
           </div>
         )}
-
-        {message.actions?.map((action, index) => (
-          <MemoryActionCard
-            key={`${message.id}-${index}`}
-            action={action}
-            onViewMemory={onViewMemory}
-          />
-        ))}
       </div>
+
+      {!isAssistant && (
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+          <User size={20} aria-hidden="true" />
+        </div>
+      )}
     </div>
   );
 }

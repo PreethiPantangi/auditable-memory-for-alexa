@@ -9,15 +9,11 @@ export default function MemoryNavigationProvider({
 }: {
   children: ReactNode;
 }) {
-  const [target, setTarget] =
-    useState<MemoryNavigationTarget | null>(null);
+  const [target, setTarget] = useState<MemoryNavigationTarget | null>(null);
 
-  const navigateToMemory = useCallback(
-    (nextTarget: MemoryNavigationTarget) => {
-      setTarget(nextTarget);
-    },
-    []
-  );
+  const navigateToMemory = useCallback((nextTarget: MemoryNavigationTarget) => {
+    setTarget(nextTarget);
+  }, []);
 
   const clearNavigation = useCallback(() => {
     setTarget(null);

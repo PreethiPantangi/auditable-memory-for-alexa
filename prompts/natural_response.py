@@ -38,4 +38,3 @@ NATURAL_RESPONSE_PROMPT = """
             - If the user clearly requested retrieval, say the request could not be processed.
             - Otherwise, ask for clarification if needed.
         """
-            

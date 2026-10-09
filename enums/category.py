@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+
 class MemoryCategory(StrEnum):
     DIET = "diet"
     HIKING = "hiking"

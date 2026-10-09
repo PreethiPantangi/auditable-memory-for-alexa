@@ -1,4 +1,3 @@
-
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import { Send } from "lucide-react";
 
@@ -7,10 +6,7 @@ interface Props {
   disabled?: boolean;
 }
 
-export default function ChatComposer({
-  onSend,
-  disabled = false,
-}: Props) {
+export default function ChatComposer({ onSend, disabled = false }: Props) {
   const [input, setInput] = useState("");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

@@ -2,6 +2,7 @@ import os
 import uuid
 
 from mcp.server.mcpserver import MCPServer
+from mcp.server.transport_security import TransportSecuritySettings
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -297,9 +298,20 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", "8000"))
 
+    transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=True,
+        allowed_hosts=[
+            "localhost:*",
+            "127.0.0.1:*",
+            "auditable-memory-for-alexa.onrender.com",
+            "auditable-memory-for-alexa.onrender.com:*",
+        ],
+    )
+
     mcp_app = mcp.streamable_http_app(
         stateless_http=True,
         json_response=True,
+        transport_security=transport_security,
     )
 
     protected_app = MCPServiceAuth(mcp_app)

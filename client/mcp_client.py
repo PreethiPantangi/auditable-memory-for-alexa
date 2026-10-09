@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -13,6 +14,8 @@ load_dotenv(BASE_DIR / ".env")
 MCP_URL = os.getenv("MCP_URL")
 MCP_SERVICE_TOKEN = os.getenv("MCP_SERVICE_TOKEN")
 
+logger = logging.getLogger(__name__)
+
 
 async def call_mcp_tool(tool_name: str, args: dict) -> dict:
     if not MCP_URL:
@@ -25,17 +28,21 @@ async def call_mcp_tool(tool_name: str, args: dict) -> dict:
 
     async with (
         httpx2.AsyncClient(
-            headers=headers, timeout=httpx2.Timeout(30.0, read=300.0)
+            headers=headers,
+            timeout=httpx2.Timeout(30.0, read=300.0),
         ) as http_client,
-        streamable_http_client(MCP_URL, http_client=http_client) as (
-            read_stream,
-            write_stream,
-        ),
+        streamable_http_client(
+            MCP_URL,
+            http_client=http_client,
+        ) as (read_stream, write_stream),
         ClientSession(read_stream, write_stream) as session,
     ):
         await session.initialize()
 
-        result = await session.call_tool(tool_name, arguments=args)
+        result = await session.call_tool(
+            tool_name,
+            arguments=args,
+        )
 
         if result.is_error:
             messages = [
@@ -44,8 +51,23 @@ async def call_mcp_tool(tool_name: str, args: dict) -> dict:
                 if getattr(block, "type", None) == "text"
             ]
 
+            logger.error(
+                "MCP tool execution failed: tool=%s",
+                tool_name,
+            )
+
             raise RuntimeError("; ".join(messages) or "MCP tool execution failed.")
 
+        # Prefer structured content when available.
+        structured = getattr(result, "structuredContent", None)
+
+        if structured is not None:
+            if not isinstance(structured, dict):
+                raise TypeError("Unexpected MCP structured response format.")
+
+            return structured
+
+        # Fallback for MCP tools returning JSON text.
         text_blocks = [
             block.text
             for block in result.content
@@ -53,7 +75,13 @@ async def call_mcp_tool(tool_name: str, args: dict) -> dict:
         ]
 
         if not text_blocks:
-            raise RuntimeError("MCP returned no text response.")
+            logger.error(
+                "MCP tool returned no usable content: tool=%s",
+                tool_name,
+            )
+            raise RuntimeError(
+                "MCP returned neither structured content nor a text response."
+            )
 
         try:
             payload = json.loads(text_blocks[0])

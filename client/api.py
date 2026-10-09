@@ -7,7 +7,6 @@ from pydantic import BaseModel
 from client.orchestrator import handle_user_message
 from security.demo_access import (
     COOKIE_NAME,
-    COOKIE_SECURE,
     SESSION_MAX_AGE,
     create_demo_session,
     require_demo_access,

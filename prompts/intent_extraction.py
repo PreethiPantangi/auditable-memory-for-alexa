@@ -100,6 +100,34 @@ def get_intent_extraction_prompt() -> str:
                 - Do not invent the previous value.
                 - Do not treat an ambiguous statement as an explicit correction solely because its category already contains a memory.
 
+                MULTI-TURN CORRECTION RULES
+
+                A user may express a correction across multiple messages.
+
+                Examples:
+
+                User: "I no longer eat chocolate brownie with hot fudge."
+                - intent: correct_memory
+                - category: food_preference
+                - value: null
+                - The existing preference needs resolution.
+                - Do not invent a replacement.
+
+                User: "I now eat chocolate brownie without hot fudge."
+                - intent: correct_memory when the message explicitly
+                replaces the previous preference.
+                - category: food_preference
+                - value: "eats chocolate brownie without hot fudge"
+
+                A statement like "I now prefer X" is not automatically
+                a new independent memory.
+
+                When the user clearly contrasts a new preference
+                with an old one, prefer CORRECT_MEMORY over REMEMBER.
+
+                Never infer an old memory_key from text.
+                The execution layer must identify and validate it.
+                
                 ## 3. RECALL
 
                 Use `recall` when the user requests the currently active memory for a category.
@@ -380,6 +408,57 @@ def get_intent_extraction_prompt() -> str:
 
                 INCOMPLETE CORRECTION REQUESTS
 
+                A statement that explicitly invalidates an existing
+                preference without specifying a replacement is an
+                incomplete correction.
+
+                Example:
+                "I no longer eat chocolate brownie with hot fudge."
+
+                Return:
+                intent = correct_memory
+                category = food_preference
+                value = null
+
+                NEGATIVE CORRECTIONS WITHOUT A REPLACEMENT
+
+                When the user states that an existing preference
+                is no longer valid, but gives no new preference,
+                extract:
+
+                intent = correct_memory
+                category = appropriate category
+                value = null
+
+                Examples:
+
+                "I no longer prefer oat milk in my coffee."
+                -> correct_memory, food_preference, null
+
+                "I don't like window seats anymore."
+                -> correct_memory, seat_preference, null
+
+                "I stopped following my previous treadmill routine."
+                -> correct_memory, fitness, null
+
+                A negated old preference is NOT a replacement value.
+
+                "I now prefer almond milk instead of oat milk."
+                -> correct_memory, food_preference,
+                "prefers almond milk instead of oat milk"
+
+                Do not transform the negative statement into a
+                positive replacement.
+
+                If the user says:
+                "I now eat chocolate brownie without hot fudge."
+
+                and it clearly contrasts an earlier preference,
+                classify it as correct_memory rather than remember.
+
+                The execution layer, not the intent extractor,
+                identifies the original memory_key.
+
                 If the user explicitly requests a correction but does not provide a replacement value, still extract:
 
                 intent: correct_memory
@@ -394,4 +473,64 @@ def get_intent_extraction_prompt() -> str:
                 Do not return an empty action list for a clearly requested correction.
 
                 The execution layer must request clarification before modifying any memory.
+
+                LOG_EVENT extraction:
+                
+                Use LOG_EVENT when the user describes
+                an actual cooking experience.
+
+                Supported:
+                domain = cooking
+                event_type = meal_prepared
+
+                Extract:
+                subject = dish name
+                attributes.adjustment = normalized change
+                outcome = BETTER | WORSE | SAME | UNKNOWN
+
+                Rules:
+                - Do not invent details.
+                - Do not infer an outcome from cooking alone.
+                - Do not create events from future plans.
+                - Do not confuse preferences with events.
+                - Leave unknown dates as null.
+                - Never generate request_id.
+
+                COOKING EVENT EXTRACTION
+
+                A cooking event describes an experience that already happened.
+
+                Intent: log_event
+
+                Supported event:
+                - domain: cooking
+                - event_type: meal_prepared
+
+                Extract:
+                - subject: name of the dish
+                - attributes.adjustment: normalized cooking adjustment
+                - outcome: BETTER, WORSE, SAME, or UNKNOWN
+                - occurred_at: null unless a reliable timezone-aware
+                event timestamp is explicitly available
+
+                Rules:
+                1. Do not confuse cooking events with food preferences.
+                2. Do not create an event for future plans.
+                3. Do not invent an adjustment, outcome, or timestamp.
+                4. If no outcome is expressed, use UNKNOWN.
+                5. If no adjustment is expressed, use empty attributes.
+                6. For log_event, category must be null.
+                7. For existing memory actions, keep the existing
+                classification behavior.
+                8. Do not generate a request_id.
+                9. Do not log an event when the user is only asking
+                about past events.
+                10. When the message describes an actual cooking
+                    experience, prefer LOG_EVENT over REMEMBER.
+
+                For LOG_EVENT:
+                - attributes must be an object containing adjustment.
+                - Use adjustment=null if no adjustment was mentioned.
+                - For non-event intents, attributes=null.
+                - Do not generate additional attribute keys.
             """

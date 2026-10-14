@@ -1,10 +1,4 @@
-import {
-  CheckCircle2,
-  AlertCircle,
-  History,
-  ArrowUpRight,
-  Info,
-} from "lucide-react";
+import { CheckCircle2, AlertCircle, ArrowUpRight, Info } from "lucide-react";
 
 import type { ChatAction } from "../../types/chat";
 
@@ -141,6 +135,8 @@ export default function MemoryActionCard({ action, onViewMemory }: Props) {
 
   const errorCode = result?.error?.code ?? "";
 
+  const isConflict = errorCode.toUpperCase() === "CONFLICTING_MEMORIES";
+
   const isClarification =
     intent === "clarification_required" ||
     ["CLARIFICATION_REQUIRED", "AMBIGUOUS_MEMORY"].includes(
@@ -160,28 +156,30 @@ export default function MemoryActionCard({ action, onViewMemory }: Props) {
       (Array.isArray(payload) && payload.length === 0));
 
   const recallFailed =
-    isRecall && result?.success === false && !isClarification;
+    isRecall && result?.success === false && !isClarification && !isConflict;
+
+  const actionFailed = !success && !isClarification && !isConflict;
 
   const forgetSucceeded = isForget && success;
 
   const forgetFailed =
     isForget && result?.success === false && !isClarification;
 
-  const actionFailed = !success && !isClarification;
-
   const isNeutral = isEmptyRecall;
 
-  const title = isClarification
-    ? "Clarification needed"
-    : isEmptyRecall
-      ? "No active memory found"
-      : recallFailed
-        ? "Unable to retrieve memory"
-        : forgetFailed
-          ? "Unable to forget memory"
-          : actionFailed
-            ? "Memory operation failed"
-            : (actionTitles[intent] ?? "Memory operation completed");
+  const title = isConflict
+    ? "Conflicting memories found"
+    : isClarification
+      ? "Clarification needed"
+      : isEmptyRecall
+        ? "No active memory found"
+        : recallFailed
+          ? "Unable to retrieve memory"
+          : forgetFailed
+            ? "Unable to forget memory"
+            : actionFailed
+              ? "Memory operation failed"
+              : (actionTitles[intent] ?? "Memory operation completed");
 
   const categoryLabel =
     typeof action.category === "string" && action.category.trim()
@@ -189,17 +187,19 @@ export default function MemoryActionCard({ action, onViewMemory }: Props) {
       : "Memory not identified";
 
   const targets =
-    success && !isClarification && !isEmptyRecall
+    (success || isConflict) && !isClarification && !isEmptyRecall
       ? extractMemoryTargets(result?.data, intent)
       : [];
 
-  const statusClasses = isClarification
+  const statusClasses = isConflict
     ? "border-amber-200 bg-amber-50"
-    : actionFailed
-      ? "border-red-200 bg-red-50"
-      : isNeutral
-        ? "border-slate-200 bg-slate-50"
-        : "border-slate-200 bg-white";
+    : isClarification
+      ? "border-amber-200 bg-amber-50"
+      : actionFailed
+        ? "border-red-200 bg-red-50"
+        : isNeutral
+          ? "border-slate-200 bg-slate-50"
+          : "border-slate-200 bg-white";
 
   return (
     <div
@@ -207,8 +207,8 @@ export default function MemoryActionCard({ action, onViewMemory }: Props) {
       role="status"
     >
       <div className="flex items-center gap-2">
-        {isClarification ? (
-          <History
+        {isConflict || isClarification ? (
+          <AlertCircle
             size={18}
             className="shrink-0 text-amber-600"
             aria-hidden="true"
@@ -237,6 +237,13 @@ export default function MemoryActionCard({ action, onViewMemory }: Props) {
       </div>
 
       <p className="mt-2 text-xs capitalize text-slate-500">{categoryLabel}</p>
+
+      {isConflict && (
+        <p className="mt-2 text-xs leading-5 text-amber-800">
+          Multiple saved memories contain conflicting information. No memory was
+          changed. You can inspect their histories below.
+        </p>
+      )}
 
       {/* Clarification required */}
       {isClarification && (

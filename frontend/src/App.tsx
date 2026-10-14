@@ -1,13 +1,18 @@
 import { useEffect, useState } from "react";
 
 import Sidebar from "./components/layout/Sidebar";
+import type { AppPage } from "./components/layout/Sidebar";
+
 import ChatPanel from "./components/chat/ChatPanel";
 import MemoryLedger from "./components/memory/MemoryLedger";
+import InsightsPanel from "./components/insights/InsightsPanel";
 import DemoLogin from "./components/auth/DemoLogin";
 
 import { checkDemoSession, loginDemo } from "./services/demoAuthApi";
 
 export default function App() {
+  const [activePage, setActivePage] = useState<AppPage>("chat");
+
   const [refreshVersion, setRefreshVersion] = useState(0);
 
   const [selectedMemoryKey, setSelectedMemoryKey] = useState<string | null>(
@@ -65,6 +70,7 @@ export default function App() {
     }
 
     setUsername(session.username);
+    setActivePage("chat");
     setSelectedMemoryKey(null);
     setHighlightedClaimId(null);
     setRefreshVersion(0);
@@ -75,6 +81,7 @@ export default function App() {
   function handleLogout() {
     setUsername(null);
     setAuthStatus("unauthenticated");
+    setActivePage("chat");
     setSelectedMemoryKey(null);
     setHighlightedClaimId(null);
     setRefreshVersion(0);
@@ -88,8 +95,10 @@ export default function App() {
   function handleViewMemory(memoryKey: string, claimId?: string | null) {
     setSelectedMemoryKey(memoryKey);
     setHighlightedClaimId(claimId ?? null);
-
     setNavigationVersion((previous) => previous + 1);
+
+    // Preserve the existing chat + ledger behavior.
+    setActivePage("chat");
   }
 
   function handleSelectMemory(memoryKey: string) {
@@ -115,25 +124,57 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)]">
-        <Sidebar onLogout={handleLogout} />
+        <Sidebar
+          activePage={activePage}
+          onNavigate={setActivePage}
+          onLogout={handleLogout}
+        />
 
-        <main className="grid min-w-0 grid-cols-1 gap-4 p-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(350px,1fr)]">
-          <ChatPanel
-            key={username}
-            userId={username}
-            onMemoryChanged={handleMemoryChanged}
-            onViewMemory={handleViewMemory}
-          />
+        <main className="min-w-0 p-4">
+          {activePage === "chat" && (
+            <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(350px,1fr)]">
+              <ChatPanel
+                key={username}
+                userId={username}
+                onMemoryChanged={handleMemoryChanged}
+                onViewMemory={handleViewMemory}
+              />
 
-          <MemoryLedger
-            key={username}
-            userId={username}
-            refreshVersion={refreshVersion}
-            selectedMemoryKey={selectedMemoryKey}
-            highlightedClaimId={highlightedClaimId}
-            onSelectMemory={handleSelectMemory}
-            navigationVersion={navigationVersion}
-          />
+              <MemoryLedger
+                key={username}
+                userId={username}
+                refreshVersion={refreshVersion}
+                selectedMemoryKey={selectedMemoryKey}
+                highlightedClaimId={highlightedClaimId}
+                onSelectMemory={handleSelectMemory}
+                navigationVersion={navigationVersion}
+              />
+            </div>
+          )}
+
+          {activePage === "memories" && (
+            <div className="mx-auto w-full max-w-5xl">
+              <MemoryLedger
+                key={username}
+                userId={username}
+                refreshVersion={refreshVersion}
+                selectedMemoryKey={selectedMemoryKey}
+                highlightedClaimId={highlightedClaimId}
+                onSelectMemory={handleSelectMemory}
+                navigationVersion={navigationVersion}
+              />
+            </div>
+          )}
+
+          {activePage === "insights" && (
+            <div className="mx-auto w-full max-w-5xl">
+              <InsightsPanel
+                key={username}
+                userId={username}
+                onMemoryChanged={handleMemoryChanged}
+              />
+            </div>
+          )}
         </main>
       </div>
     </div>

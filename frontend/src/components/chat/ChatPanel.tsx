@@ -20,12 +20,24 @@ type ChatPanelProps = {
   onViewMemory: (memoryKey: string, claimId?: string | null) => void;
 };
 
+function getConversationId(userId: string): string {
+  const key = `adh:conversation:${userId}`;
+  const existing = sessionStorage.getItem(key);
+
+  if (existing) return existing;
+
+  const conversationId = crypto.randomUUID();
+  sessionStorage.setItem(key, conversationId);
+  return conversationId;
+}
+
 export default function ChatPanel({
   userId,
   onMemoryChanged,
   onViewMemory,
 }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([welcomeMessage]);
+  const conversationId = getConversationId(userId);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +68,7 @@ export default function ChatPanel({
     setMessages((previous) => [...previous, userMessage]);
 
     try {
-      const result = await sendMessage(userId, content);
+      const result = await sendMessage(userId, conversationId, content);
 
       // Existing F2 behavior:
       // Refresh the ledger only after successful mutations.

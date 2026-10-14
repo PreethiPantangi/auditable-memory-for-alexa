@@ -234,6 +234,7 @@ export default function MemoryDetail({
 
         {!loading && !error && (
           <MemoryTimeline
+            userId={userId}
             claims={history}
             highlightedClaimId={highlightedClaimId}
             navigationVersion={navigationVersion}

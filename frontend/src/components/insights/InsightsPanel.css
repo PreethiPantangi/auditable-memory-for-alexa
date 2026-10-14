@@ -1,0 +1,133 @@
+.insights-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.insights-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.insights-header h2,
+.insight-card h3 {
+  margin: 0;
+}
+
+.insights-header p,
+.insight-metadata,
+.insights-empty {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.insights-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insight-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.insight-card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.insight-status {
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 20px;
+  padding: 5px 9px;
+  background: #f3f4f6;
+  white-space: nowrap;
+}
+
+.insight-status.confirmed {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.insight-status.pending_confirmation {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.insight-evidence-toggle {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: #2563eb;
+  cursor: pointer;
+}
+
+.insight-evidence {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.insight-evidence ul {
+  padding-left: 20px;
+}
+
+.insight-evidence li {
+  margin-bottom: 12px;
+}
+
+.insight-evidence li p {
+  margin: 4px 0;
+}
+
+.insight-evidence time {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.insight-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.insight-actions button,
+.insights-header button {
+  padding: 8px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.insight-actions button:disabled,
+.insights-header button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.insight-reject {
+  background: transparent;
+  border: 1px solid #d1d5db;
+}
+
+.insights-error {
+  color: #b91c1c;
+  padding: 10px;
+  background: #fef2f2;
+  border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .insights-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

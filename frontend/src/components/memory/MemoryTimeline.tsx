@@ -6,13 +6,12 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowRight,
-  Quote,
-  Fingerprint,
 } from "lucide-react";
-
 import type { MemoryClaim } from "../../types/memory";
+import MemoryEvidence from "./MemoryEvidence";
 
 interface Props {
+  userId: string;
   claims: MemoryClaim[];
   highlightedClaimId?: string | null;
   navigationVersion?: number;
@@ -60,6 +59,7 @@ const statusConfig = {
 };
 
 export default function MemoryTimeline({
+  userId,
   claims,
   highlightedClaimId,
   navigationVersion,
@@ -311,55 +311,10 @@ export default function MemoryTimeline({
                   id={`evidence-${claim.claim_id}`}
                   className="mt-3 space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-3"
                 >
-                  <div>
-                    <p className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                      <Quote size={14} />
-                      Original source utterance
-                    </p>
-
-                    <blockquote className="mt-2 whitespace-pre-wrap wrap-break-word text-sm italic text-slate-800">
-                      {claim.source_utterance
-                        ? `“${claim.source_utterance}”`
-                        : "No source utterance recorded."}
-                    </blockquote>
-                  </div>
-
-                  <div>
-                    <p className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                      <Fingerprint size={14} />
-                      Claim ID
-                    </p>
-
-                    <p className="mt-1 break-all font-mono text-xs text-slate-700">
-                      {claim.claim_id}
-                    </p>
-                  </div>
-
-                  <dl className="space-y-2 text-xs">
-                    <div>
-                      <dt className="text-slate-500">Source type</dt>
-                      <dd className="text-slate-800">{claim.source_type}</dd>
-                    </div>
-
-                    <div>
-                      <dt className="text-slate-500">Category</dt>
-                      <dd className="text-slate-800">{claim.category}</dd>
-                    </div>
-
-                    <div>
-                      <dt className="text-slate-500">Memory key</dt>
-                      <dd className="break-all font-mono text-slate-800">
-                        {claim.memory_key}
-                      </dd>
-                    </div>
-
-                    <div>
-                      <dt className="text-slate-500">Created at</dt>
-                      <dd className="text-slate-800">
-                        {formatDate(claim.created_at)}
-                      </dd>
-                    </div>
-                  </dl>
+                  <MemoryEvidence
+                    userId={userId}
+                    claimId={String(claim.claim_id)}
+                  />
                 </div>
               )}
             </article>

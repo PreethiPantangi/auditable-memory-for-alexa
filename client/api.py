@@ -1,10 +1,13 @@
 import logging
+from uuid import UUID
 
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sqlalchemy import text
 
 from client.orchestrator import handle_user_message
+from database import SessionLocal
 from security.demo_access import (
     COOKIE_NAME,
     SESSION_MAX_AGE,
@@ -14,6 +17,7 @@ from security.demo_access import (
 )
 from security.demo_users import is_allowed_demo_user
 
+from .insights_api import router as insights_router
 from .memory_api import router as memory_router
 
 logger = logging.getLogger(__name__)
@@ -22,6 +26,10 @@ app = FastAPI(title="Auditable Memory API")
 
 app.include_router(
     memory_router,
+    dependencies=[Depends(require_demo_access)],
+)
+app.include_router(
+    insights_router,
     dependencies=[Depends(require_demo_access)],
 )
 
@@ -45,7 +53,9 @@ class DemoLoginRequest(BaseModel):
 
 class ChatRequest(BaseModel):
     user_id: str
+    conversation_id: UUID
     message: str
+    request_id: UUID | None = None
 
 
 def validate_demo_user(user_id: str) -> str:
@@ -69,6 +79,43 @@ def validate_session_user(
         )
 
     return authenticated_user_id
+
+
+async def register_conversation(
+    conversation_id: UUID,
+    user_id: str,
+) -> None:
+    async with SessionLocal() as session, session.begin():
+        result = await session.execute(
+            text("""
+                INSERT INTO conversations (id, user_id)
+                VALUES (:conversation_id, :user_id)
+                ON CONFLICT (id) DO NOTHING
+                RETURNING id
+            """),
+            {
+                "conversation_id": conversation_id,
+                "user_id": user_id,
+            },
+        )
+
+        if result.scalar_one_or_none() is not None:
+            return
+
+        owner = await session.scalar(
+            text("""
+                SELECT user_id
+                FROM conversations
+                WHERE id = :conversation_id
+            """),
+            {"conversation_id": conversation_id},
+        )
+
+        if owner != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Conversation access denied.",
+            )
 
 
 @app.get("/health")
@@ -143,9 +190,18 @@ async def chat(
     )
 
     try:
+        await register_conversation(
+            conversation_id=request.conversation_id,
+            user_id=request.user_id,
+        )
+
         result = await handle_user_message(
-            user_id=user_id,
+            user_id=request.user_id,
             message=request.message,
+            request_id=(
+                str(request.request_id) if request.request_id is not None else None
+            ),
+            conversation_id=str(request.conversation_id),
         )
         return result
 

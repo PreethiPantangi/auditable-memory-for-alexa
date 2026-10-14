@@ -4,6 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function sendMessage(
   userId: string,
+  conversationId: string,
   message: string,
 ): Promise<ChatResponse> {
   const response = await fetch(`${API_BASE_URL}/chat`, {
@@ -14,7 +15,9 @@ export async function sendMessage(
     },
     body: JSON.stringify({
       user_id: userId,
+      conversation_id: conversationId,
       message,
+      request_id: crypto.randomUUID(),
     }),
   });
 

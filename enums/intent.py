@@ -8,3 +8,4 @@ class MemoryIntent(StrEnum):
     FORGET = "forget"
     EXPLAIN = "explain"
     MEMORY_HISTORY = "memory_history"
+    LOG_EVENT = "log_event"

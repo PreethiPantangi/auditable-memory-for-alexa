@@ -3,6 +3,8 @@ import type {
   MemoryHistoryResponse,
 } from "../types/memory";
 
+import type { MemoryExplanation } from "../types/memory";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export async function getMemories(userId: string): Promise<MemoryListResponse> {
@@ -36,4 +38,24 @@ export async function getMemoryHistory(
   }
 
   return response.json();
+}
+
+export async function getMemoryExplanation(
+  userId: string,
+  claimId: string,
+  signal?: AbortSignal,
+): Promise<MemoryExplanation> {
+  const response = await fetch(
+    `${API_BASE_URL}/memories/${encodeURIComponent(claimId)}/explain?user_id=${encodeURIComponent(userId)}`,
+    {
+      credentials: "include",
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to load memory explanation");
+  }
+
+  return response.json() as Promise<MemoryExplanation>;
 }

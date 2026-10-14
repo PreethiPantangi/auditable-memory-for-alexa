@@ -89,4 +89,27 @@ RESOLVE_MEMORY_PROMPT = """
             - "I prefer Sea Salt with Caramel instead."
             - "Change my treadmill distance to 3 miles."
             - "I live in Bellevue now."
+
+            A replacement value does not require the user to
+            provide exact database wording.
+
+            Examples of complete replacements:
+
+            "Replace it with a preference for city walks."
+            "Actually, I prefer city walks now."
+            "I prefer city walks instead of scenic hikes."
+
+            These statements contain meaningful replacement values.
+
+            Do not require the user to specify how a preference
+            should be formatted for storage.
+
+            However, replacement completeness and target
+            identification are separate decisions.
+
+            If the target memory cannot be identified reliably,
+            request clarification rather than guessing.
+
+            Never use expired pending clarification state
+            to identify a correction target.
         """

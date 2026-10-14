@@ -1,30 +1,39 @@
-import { MessageCircle, Database, ChefHat } from "lucide-react";
+import { MessageCircle, Database, ChefHat, LogOut } from "lucide-react";
+
 import AlexaPlusLogo from "../branding/AlexaPlusLogo";
-import { LogOut } from "lucide-react";
 import { logoutDemo } from "../../services/demoAuthApi";
+
+export type AppPage = "chat" | "memories" | "insights";
 
 const navItems = [
   {
     label: "Chat",
+    id: "chat",
     icon: MessageCircle,
-    active: true,
   },
   {
     label: "Memories",
+    id: "memories",
     icon: Database,
-    active: false,
   },
   {
     label: "Cooking Insights",
+    id: "insights",
     icon: ChefHat,
-    active: false,
   },
-];
+] as const;
 
 interface SidebarProps {
+  activePage: AppPage;
+  onNavigate: (page: AppPage) => void;
   onLogout: () => void;
 }
-export default function Sidebar({ onLogout }: SidebarProps) {
+
+export default function Sidebar({
+  activePage,
+  onNavigate,
+  onLogout,
+}: SidebarProps) {
   async function handleLogout() {
     try {
       await logoutDemo();
@@ -45,13 +54,16 @@ export default function Sidebar({ onLogout }: SidebarProps) {
           <ul className="space-y-2">
             {navItems.map((item) => {
               const Icon = item.icon;
+              const isActive = activePage === item.id;
 
               return (
-                <li key={item.label}>
+                <li key={item.id}>
                   <button
                     type="button"
+                    onClick={() => onNavigate(item.id)}
+                    aria-current={isActive ? "page" : undefined}
                     className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-base font-medium transition ${
-                      item.active
+                      isActive
                         ? "bg-blue-50 text-blue-700"
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
@@ -64,6 +76,7 @@ export default function Sidebar({ onLogout }: SidebarProps) {
             })}
           </ul>
         </nav>
+
         <button
           type="button"
           onClick={handleLogout}

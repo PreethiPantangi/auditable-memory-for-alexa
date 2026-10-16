@@ -1,0 +1,482 @@
+{
+  "schemas": {
+    "ContextResolution": {
+      "properties": {
+        "status": {
+          "enum": [
+            "FOLLOW_UP",
+            "NEW_REQUEST",
+            "UNCLEAR"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "ContextResolution",
+      "type": "object"
+    },
+    "Actions": {
+      "$defs": {
+        "Action": {
+          "properties": {
+            "intent": {
+              "$ref": "#/$defs/MemoryIntent"
+            },
+            "category": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/MemoryCategory"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Value"
+            },
+            "memory_key": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Memory Key"
+            },
+            "explain_scope": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ExplainScope"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null
+            },
+            "domain": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Domain"
+            },
+            "event_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Event Type"
+            },
+            "subject": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Subject"
+            },
+            "attributes": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/EventAttributes"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "outcome": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Outcome"
+            },
+            "occurred_at": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Occurred At"
+            }
+          },
+          "required": [
+            "intent",
+            "attributes"
+          ],
+          "title": "Action",
+          "type": "object"
+        },
+        "EventAttributes": {
+          "additionalProperties": false,
+          "properties": {
+            "adjustment": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Adjustment"
+            }
+          },
+          "required": [
+            "adjustment"
+          ],
+          "title": "EventAttributes",
+          "type": "object"
+        },
+        "ExplainScope": {
+          "enum": [
+            "current",
+            "historical"
+          ],
+          "title": "ExplainScope",
+          "type": "string"
+        },
+        "MemoryCategory": {
+          "enum": [
+            "diet",
+            "hiking",
+            "seat_preference",
+            "food_preference",
+            "work_location",
+            "work_arrangement",
+            "residence",
+            "fitness"
+          ],
+          "title": "MemoryCategory",
+          "type": "string"
+        },
+        "MemoryIntent": {
+          "enum": [
+            "remember",
+            "recall",
+            "correct_memory",
+            "forget",
+            "explain",
+            "memory_history",
+            "log_event"
+          ],
+          "title": "MemoryIntent",
+          "type": "string"
+        }
+      },
+      "properties": {
+        "actions": {
+          "items": {
+            "$ref": "#/$defs/Action"
+          },
+          "title": "Actions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "actions"
+      ],
+      "title": "Actions",
+      "type": "object"
+    },
+    "RecallRelevanceResult": {
+      "properties": {
+        "status": {
+          "enum": [
+            "MATCHED",
+            "AMBIGUOUS",
+            "NOT_FOUND"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "selected_claim_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Selected Claim Ids",
+          "type": "array"
+        },
+        "clarification_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Clarification Question"
+        }
+      },
+      "required": [
+        "status",
+        "selected_claim_ids",
+        "clarification_question"
+      ],
+      "title": "RecallRelevanceResult",
+      "type": "object"
+    },
+    "MemoryRelevanceDecision": {
+      "properties": {
+        "status": {
+          "enum": [
+            "MATCHED",
+            "AMBIGUOUS",
+            "NOT_FOUND"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "claims": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Claims",
+          "type": "array"
+        },
+        "clarification_question": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Clarification Question"
+        }
+      },
+      "required": [
+        "status",
+        "claims",
+        "clarification_question"
+      ],
+      "title": "MemoryRelevanceDecision",
+      "type": "object"
+    },
+    "MemoryConflict": {
+      "properties": {
+        "claim_ids": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Claim Ids",
+          "type": "array"
+        },
+        "subject": {
+          "title": "Subject",
+          "type": "string"
+        },
+        "attribute": {
+          "title": "Attribute",
+          "type": "string"
+        },
+        "conflicting_values": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicting Values",
+          "type": "array"
+        }
+      },
+      "required": [
+        "claim_ids",
+        "subject",
+        "attribute",
+        "conflicting_values"
+      ],
+      "title": "MemoryConflict",
+      "type": "object"
+    },
+    "ConflictAnalysis": {
+      "$defs": {
+        "MemoryConflict": {
+          "properties": {
+            "claim_ids": {
+              "items": {
+                "type": "integer"
+              },
+              "title": "Claim Ids",
+              "type": "array"
+            },
+            "subject": {
+              "title": "Subject",
+              "type": "string"
+            },
+            "attribute": {
+              "title": "Attribute",
+              "type": "string"
+            },
+            "conflicting_values": {
+              "items": {
+                "type": "string"
+              },
+              "title": "Conflicting Values",
+              "type": "array"
+            }
+          },
+          "required": [
+            "claim_ids",
+            "subject",
+            "attribute",
+            "conflicting_values"
+          ],
+          "title": "MemoryConflict",
+          "type": "object"
+        }
+      },
+      "properties": {
+        "conflicts": {
+          "items": {
+            "$ref": "#/$defs/MemoryConflict"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        }
+      },
+      "title": "ConflictAnalysis",
+      "type": "object"
+    },
+    "ClarificationResolution": {
+      "properties": {
+        "status": {
+          "enum": [
+            "SELECTED",
+            "STILL_AMBIGUOUS",
+            "NEW_REQUEST"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "memory_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Memory Key"
+        }
+      },
+      "required": [
+        "status",
+        "memory_key"
+      ],
+      "title": "ClarificationResolution",
+      "type": "object"
+    },
+    "CorrectionTargetResolution": {
+      "properties": {
+        "status": {
+          "enum": [
+            "MATCHED",
+            "AMBIGUOUS",
+            "NOT_FOUND"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "memory_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Memory Key"
+        }
+      },
+      "required": [
+        "status",
+        "memory_key"
+      ],
+      "title": "CorrectionTargetResolution",
+      "type": "object"
+    },
+    "PendingCorrectionResolution": {
+      "properties": {
+        "status": {
+          "enum": [
+            "REPLACE",
+            "FORGET",
+            "CANCEL",
+            "NEW_REQUEST",
+            "UNCLEAR"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "replacement_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replacement Value"
+        }
+      },
+      "required": [
+        "status",
+        "replacement_value"
+      ],
+      "title": "PendingCorrectionResolution",
+      "type": "object"
+    }
+  },
+  "prompt_sha256": {
+    "resolve_correction_target": "a71d68f3e93578f48e988f5234d94449390be7dcb93458261dffd9474e495b64",
+    "resolve_pending_correction_reply": "f988051379145941a5019239f9f7b0ab9ed685143c28ca0252b9ef4ab4778c64",
+    "classify_context_followup": "e3eb877b721dbb4284e086be90cc5bd4952f232a53335ab33e1d9ddb2d59ff52"
+  }
+}

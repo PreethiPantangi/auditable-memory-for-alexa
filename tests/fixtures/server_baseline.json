@@ -1,0 +1,589 @@
+{
+  "tools": [
+    {
+      "name": "server_status",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {},
+        "title": "server_statusArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "recall",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "memory_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Memory Key"
+          }
+        },
+        "required": [
+          "user_id",
+          "category"
+        ],
+        "title": "recallArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "remember",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "source_utterance": {
+            "title": "Source Utterance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "category",
+          "value",
+          "source_utterance"
+        ],
+        "title": "rememberArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "explain",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "integer"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "claim_id",
+          "user_id"
+        ],
+        "title": "explainArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "correct_memory",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "source_utterance": {
+            "title": "Source Utterance",
+            "type": "string"
+          },
+          "memory_key": {
+            "title": "Memory Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "category",
+          "value",
+          "source_utterance",
+          "memory_key"
+        ],
+        "title": "correct_memoryArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "forget",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "memory_key": {
+            "title": "Memory Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "category",
+          "memory_key"
+        ],
+        "title": "forgetArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "memory_history",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "memory_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Memory Key"
+          }
+        },
+        "required": [
+          "user_id",
+          "category"
+        ],
+        "title": "memory_historyArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "log_event",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "subject": {
+            "title": "Subject",
+            "type": "string"
+          },
+          "attributes": {
+            "additionalProperties": true,
+            "title": "Attributes",
+            "type": "object"
+          },
+          "source_utterance": {
+            "title": "Source Utterance",
+            "type": "string"
+          },
+          "request_id": {
+            "title": "Request Id",
+            "type": "string"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outcome"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Occurred At"
+          }
+        },
+        "required": [
+          "user_id",
+          "domain",
+          "event_type",
+          "subject",
+          "attributes",
+          "source_utterance",
+          "request_id"
+        ],
+        "title": "log_eventArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "list_events",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "domain": {
+            "title": "Domain",
+            "type": "string"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Subject"
+          },
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "domain"
+        ],
+        "title": "list_eventsArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "derive_insights",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "domain": {
+            "default": "cooking",
+            "title": "Domain",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "derive_insightsArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "save_insight_candidates",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "save_insight_candidatesArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "confirm_insight",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "title": "Insight Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "insight_id"
+        ],
+        "title": "confirm_insightArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "reject_insight",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "title": "Insight Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "insight_id"
+        ],
+        "title": "reject_insightArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "list_insights",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "list_insightsArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
+      "name": "get_insight_evidence",
+      "title": null,
+      "description": "",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "insight_id": {
+            "title": "Insight Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "user_id",
+          "insight_id"
+        ],
+        "title": "get_insight_evidenceArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    }
+  ],
+  "signatures": {
+    "validate_demo_user": "(user_id: str) -> dict | None",
+    "server_status": "() -> dict",
+    "recall": "(user_id: str, category: str, memory_key: str | None = None) -> dict",
+    "remember": "(user_id: str, category: str, value: str, source_utterance: str) -> dict",
+    "explain": "(claim_id: int, user_id: str) -> dict",
+    "correct_memory": "(user_id: str, category: str, value: str, source_utterance: str, memory_key: str) -> dict",
+    "forget": "(user_id: str, category: str, memory_key: str) -> dict",
+    "memory_history": "(user_id: str, category: str, memory_key: str | None = None) -> dict",
+    "log_event": "(user_id: str, domain: str, event_type: str, subject: str, attributes: dict, source_utterance: str, request_id: str, outcome: str | None = None, occurred_at: str | None = None) -> dict",
+    "list_events": "(user_id: str, domain: str, subject: str | None = None, limit: int = 50) -> dict",
+    "derive_insights": "(user_id: str, domain: str = 'cooking') -> dict",
+    "save_insight_candidates": "(user_id: str) -> dict",
+    "confirm_insight": "(user_id: str, insight_id: int) -> dict",
+    "reject_insight": "(user_id: str, insight_id: int) -> dict",
+    "list_insights": "(user_id: str) -> dict",
+    "get_insight_evidence": "(user_id: str, insight_id: int) -> dict",
+    "event_payload_hash": "(event: validators.event_validator.EventInput) -> str"
+  },
+  "sql_sha256": {
+    "validate_demo_user": [],
+    "server_status": [],
+    "recall": [
+      "bab6f4d388b718132daebffec63908dedb7497361e73f75c84641951c4374637"
+    ],
+    "remember": [
+      "a9f2f5bad17821b4976a30e87ae102c6a1dd1269ccff35fc99c0f5121b589f82"
+    ],
+    "explain": [
+      "d59787eff8f4cc4db9084abf672466e017a2df003ee42cc7573df7c7ff0eac9b",
+      "f7dea7dbe8e92552f2b1524a739bea9118e99aa0692f5d2a9105aa03ca29afdf",
+      "8c3b0ee6f94401586cd9a07ebe9a409ee49b46573bdf7b8974754e0680f43723"
+    ],
+    "correct_memory": [
+      "e5a348641b7adec03af0f658ed3b776db1145ae4c68bd8d283983876f2e99836",
+      "c097be88ef1a8bceced5dfafb76d2a2acae1b7b3cbf078ba79da21da852339b2",
+      "f63869c32639a8f6f583bed57615018e367636c57a3c26ffd7e4ea5ea8f7af09",
+      "dc6d9c08f6bbb63ba47d66319799e45b009217f813500a58cfc8594679f6bece"
+    ],
+    "forget": [
+      "f74a720dd05e0b4226a05dca915691ebd225a7319ca2a8a4e375a2034a8219f6"
+    ],
+    "memory_history": [
+      "4075bd073e6ea6720edf2e868da96d6d2345afc82241caabdb5248827e6901cc"
+    ],
+    "log_event": [
+      "9c9ebc291c3fecbfa131bfdf9f0f0cb3f898fe2ac67680bfb9a29229d08b81e8",
+      "271e7a559bd3080b8c5e7a47a793aff27cdcc3153a0685843cc5a3460c01f2ac"
+    ],
+    "list_events": [
+      "941077691e095d216902a6885e768004d00ed27f61b28973e6cc24fe3eb0c786"
+    ],
+    "derive_insights": [
+      "a8b4a8fd7b137b12214ea1163dab7624d8cf2235d850c004cd5b63fcc3df7044"
+    ],
+    "save_insight_candidates": [],
+    "confirm_insight": [],
+    "reject_insight": [],
+    "list_insights": [
+      "d58dcdef5aa6c45054c370cd15072d253b4a73694360c133c178db0a22d2b6ed"
+    ],
+    "get_insight_evidence": [
+      "6940a0717aaa4712d847944bec426701f585936d43e5e987e5ea2c4f145fc419",
+      "3aa0e2bb55aa1bea7b67ce31e590288f9fa5398dec9f2ca5d3a72b8bafb61bb5"
+    ],
+    "event_payload_hash": []
+  }
+}

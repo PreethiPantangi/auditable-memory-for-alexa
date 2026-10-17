@@ -85,3 +85,28 @@ ConflictAnalysis.__module__ = "client.orchestrator"
 ClarificationResolution.__module__ = "client.orchestrator"
 CorrectionTargetResolution.__module__ = "client.orchestrator"
 PendingCorrectionResolution.__module__ = "client.orchestrator"
+
+
+class ContextOperationResolution(BaseModel):
+    status: Literal["MATCHED", "NEW_REQUEST", "UNCLEAR"]
+    operation: Literal["CORRECT_MEMORY", "FORGET", "EXPLAIN", "NONE"]
+    replacement_value: str | None
+
+
+class ConversationDecision(BaseModel):
+    target: Literal[
+        "PREVIOUS_MEMORY",
+        "NEW_REQUEST",
+        "AMBIGUOUS",
+    ]
+
+    operation: Literal[
+        "RECALL",
+        "CORRECT_MEMORY",
+        "FORGET",
+        "EXPLAIN",
+        "NONE",
+    ]
+
+    replacement_value: str | None
+    clarification_question: str | None

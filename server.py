@@ -70,6 +70,17 @@ async def recall(user_id: str, category: str, memory_key: str | None = None) -> 
 
 
 @mcp.tool()
+async def recall_all(user_id: str) -> dict:
+    """Retrieve all current claims for one authenticated demo user."""
+    validation_error = validate_demo_user(user_id)
+    if validation_error is not None:
+        return validation_error
+    return await memory_service.recall_all(
+        session_factory=SessionLocal, user_id=user_id,
+    )
+
+
+@mcp.tool()
 async def remember(
     user_id: str, category: str, value: str, source_utterance: str
 ) -> dict:

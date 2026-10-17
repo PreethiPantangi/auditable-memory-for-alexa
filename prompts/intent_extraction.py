@@ -146,6 +146,17 @@ def get_intent_extraction_prompt() -> str:
                 - intent: recall
                 - category: diet
 
+                RECALL SCOPE:
+                - For questions explicitly naming a memory category/subject, use
+                  recall_scope="CATEGORY" and the appropriate category.
+                - For broad questions requesting a summary across memory categories,
+                  use recall_scope="ALL" and category=null. Examples include
+                  "What do I enjoy?", "What things do you know I like?", and
+                  "Tell me about my interests." Do NOT map vague words like
+                  "enjoy" or "like" automatically to food_preference.
+                - Scope ALL is READ-ONLY, and must never be used for
+                  remember, correction, forget or explain operations.
+
                 For recall, set `value` and `explain_scope` to null.
 
                 ## 4. MEMORY_HISTORY

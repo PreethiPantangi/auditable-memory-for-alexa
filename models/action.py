@@ -1,4 +1,6 @@
 
+from typing import Literal
+
 from pydantic import BaseModel, ConfigDict
 
 from enums.category import MemoryCategory
@@ -14,6 +16,7 @@ class EventAttributes(BaseModel):
 class Action(BaseModel):
     intent: MemoryIntent
     category: MemoryCategory | None = None
+    recall_scope: Literal["CATEGORY", "ALL"] | None = None
     value: str | None = None
     memory_key: str | None = None
     explain_scope: ExplainScope | None = None

@@ -41,6 +41,27 @@ async def recall(
             raise
 
 
+async def recall_all(session_factory, user_id: str) -> dict:
+    """Read only this user's ACTIVE claims across all categories."""
+    async with session_factory() as session:
+        try:
+            result = await session.execute(
+                text("""
+                    SELECT id AS claim_id, user_id, category, value,
+                           source_type, source_utterance, memory_key,
+                           status, created_at, superseded_by_claim_id
+                    FROM claims
+                    WHERE user_id = :user_id AND status = 'ACTIVE'
+                    ORDER BY created_at DESC, id DESC
+                """),
+                {"user_id": user_id},
+            )
+            return success_response(data=[dict(row) for row in result.mappings().all()])
+        except SQLAlchemyError:
+            await session.rollback()
+            raise
+
+
 async def remember(
     session_factory,
     user_id: str,

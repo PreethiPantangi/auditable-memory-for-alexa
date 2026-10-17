@@ -205,9 +205,14 @@ async def chat(
         )
         return result
 
+    except HTTPException:
+        # Preserve intentional authorization errors,
+        # including 401, 403, and 404.
+        raise
+
     except Exception:
         logger.exception("Chat request failed")
         raise HTTPException(
             status_code=500,
             detail="Unable to process request",
-        )
+        ) from None

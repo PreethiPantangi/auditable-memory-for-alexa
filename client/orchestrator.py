@@ -14,6 +14,10 @@ from client.conversation_state import (
     save_pending_clarification,
     save_pending_correction,
 )
+from client.context_reference import (
+    is_referential_mutation,
+    verify_active_context_claim,
+)
 from client.memory_context import (
     clear_memory_context,
     get_memory_context,
@@ -24,6 +28,7 @@ from enums.scope import ExplainScope
 from models.action import Action
 from models.memoryresolution import MemoryResolution
 from prompts.context_followup import CONTEXT_FOLLOWUP_PROMPT
+from prompts.conversation_decision import CONVERSATION_DECISION_PROMPT
 from prompts.intent_extraction import get_intent_extraction_prompt
 from prompts.memory_conflicts import MEMORY_CONFLICT_PROMPT
 from prompts.natural_response import NATURAL_RESPONSE_PROMPT
@@ -54,6 +59,8 @@ from models.orchestration import (
     ClarificationResolution,
     ConflictAnalysis,
     ContextResolution,
+    ContextOperationResolution,
+    ConversationDecision,
     CorrectionTargetResolution,
     MemoryConflict as MemoryConflict,
     MemoryRelevanceDecision,
@@ -192,81 +199,199 @@ async def classify_context_followup(
     return response.output_parsed
 
 
-async def try_contextual_recall(
+async def classify_conversation(message: str, claim: dict) -> ConversationDecision:
+    response = await asyncio.to_thread(
+        client.responses.parse,
+        model=MODEL,
+        input=[
+            {"role": "system", "content": CONVERSATION_DECISION_PROMPT},
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "latest_message": message,
+                        "previous_memory": {
+                            "value": claim["value"],
+                            "category": claim["category"],
+                        },
+                    }
+                ),
+            },
+        ],
+        text_format=ConversationDecision,
+    )
+    d = response.output_parsed
+    if d is None:
+        raise ValueError("Context interpretation failed")
+    if d.target != "PREVIOUS_MEMORY":
+        if d.operation != "NONE" or d.replacement_value is not None:
+            raise ValueError("Unverified target cannot authorize an action")
+    elif d.operation == "NONE":
+        raise ValueError("Previous memory requires an operation")
+    if d.operation != "CORRECT_MEMORY" and d.replacement_value is not None:
+        raise ValueError("Unexpected replacement value")
+    if d.replacement_value is not None and not d.replacement_value.strip():
+        raise ValueError("Replacement cannot be empty")
+    return d
+
+
+async def try_conversational_context(
     user_id: str,
     conversation_id: str,
     message: str,
+    actions: list[Action] | None = None,
 ) -> dict | None:
-
     context = await get_memory_context(user_id, conversation_id)
-
     if context is None:
+        # A referential mutation without verified context must not fall through
+        # to a category-guessing correction or forget operation.
+        if is_referential_mutation(message):
+            return {
+                "message": "Which memory would you like to change or forget?",
+                "actions": [],
+            }
         return None
 
-    logger.info(
-        "R3-06 context: user=%s conversation=%s context=%s",
-        user_id,
-        conversation_id,
-        context,
-    )
-
-    result = await call_mcp_tool(
-        tool_name=MemoryIntent.RECALL.value,
-        args={
-            "user_id": user_id,
-            "category": context["category"],
-        },
-    )
-
-    if not result.get("success"):
-        raise RuntimeError("Memory validation failed.")
-
-    claims = [
-        claim
-        for claim in result.get("data", [])
-        if claim.get("memory_key") == str(context["memory_key"])
-        and claim.get("status") == "ACTIVE"
-    ]
-
-    if len(claims) != 1:
+    # A new explicitly selected category or broad ALL-scope recall should be
+    # routed normally, not answered from the previously retrieved claim.
+    if actions is not None and is_independent_memory_request(actions, context):
         await clear_memory_context(user_id, conversation_id)
-
+        logger.info("CC-01 independent request: old_category=%s", context["category"])
         return None
 
-    claim = claims[0]
+    current = await call_mcp_tool(
+        tool_name=MemoryIntent.RECALL.value,
+        args={"user_id": user_id, "category": context["category"]},
+    )
+    if current.get("success") is not True:
+        return {"message": "I couldn't verify that memory right now.", "actions": []}
+    claim = verify_active_context_claim(
+        context,
+        current.get("data", []),
+        user_id,
+    )
+    if claim is None:
+        await clear_memory_context(user_id, conversation_id)
+        if is_referential_mutation(message):
+            return {
+                "message": "That memory is no longer active. Please name it again.",
+                "actions": [],
+            }
+        return None
 
-    decision = await classify_context_followup(message, claim)
-
+    d = await classify_conversation(message, claim)
     logger.info(
-        "R3-06 decision: message=%r status=%s memory_key=%s",
-        message,
-        decision.status,
-        claim["memory_key"],
+        "CC-01: target=%s operation=%s category=%s",
+        d.target,
+        d.operation,
+        claim["category"],
     )
-
-    if decision.status != "FOLLOW_UP":
+    if d.target == "NEW_REQUEST":
+        await clear_memory_context(user_id, conversation_id)
+        if is_referential_mutation(message):
+            return {
+                "message": "Please specify the memory you want to change or forget.",
+                "actions": [],
+            }
         return None
-
-    actions = [
-        {
-            "intent": MemoryIntent.RECALL.value,
-            "category": claim["category"],
-            "result": {
-                "success": True,
-                "data": [claim],
-            },
+    if d.target == "AMBIGUOUS":
+        return {
+            "message": d.clarification_question or "Which memory do you mean?",
+            "actions": [],
         }
-    ]
 
-    natural_response = await generate_natural_response(
-        user_message=message,
-        results=actions,
+    category = claim["category"]
+    key = str(claim["memory_key"])
+    if d.operation == "RECALL":
+        actions = [
+            {
+                "intent": MemoryIntent.RECALL.value,
+                "category": category,
+                "result": {"success": True, "data": [claim]},
+            }
+        ]
+        answer = await generate_natural_response(user_message=message, results=actions)
+        return {"message": answer, "actions": actions}
+
+    if d.operation == "CORRECT_MEMORY":
+        if d.replacement_value is None:
+            question = "What should I replace that memory with? Please state the full updated fact."
+            await save_pending_correction(
+                conversation_id=conversation_id,
+                user_id=user_id,
+                original_question=message,
+                category=category,
+                target_memory_key=key,
+                clarification_question=question,
+            )
+            return {
+                "message": question,
+                "actions": [
+                    {
+                        "intent": MemoryIntent.CORRECT_MEMORY.value,
+                        "category": category,
+                        "result": {
+                            "success": False,
+                            "error": {
+                                "code": "CLARIFICATION_REQUIRED",
+                                "message": question,
+                            },
+                        },
+                    }
+                ],
+            }
+        intent = MemoryIntent.CORRECT_MEMORY
+        args = {
+            "user_id": user_id,
+            "category": category,
+            "memory_key": key,
+            "value": d.replacement_value.strip(),
+            "source_utterance": message,
+        }
+    elif d.operation == "FORGET":
+        intent = MemoryIntent.FORGET
+        args = {"user_id": user_id, "category": category, "memory_key": key}
+    elif d.operation == "EXPLAIN":
+        if not isinstance(claim.get("claim_id"), int):
+            return {
+                "message": "I couldn't verify the source of that memory.",
+                "actions": [],
+            }
+        intent = MemoryIntent.EXPLAIN
+        args = {"user_id": user_id, "claim_id": claim["claim_id"]}
+    else:
+        raise ValueError("Unsupported contextual operation")
+
+    result = await call_mcp_tool(tool_name=intent.value, args=args)
+    logger.info(
+        "CC-01 MCP operation=%s success=%s", intent.value, result.get("success")
     )
+    actions = [{"intent": intent.value, "category": category, "result": result}]
+    if result.get("success") is True:
+        if intent == MemoryIntent.FORGET:
+            await clear_memory_context(user_id, conversation_id)
+        elif intent == MemoryIntent.CORRECT_MEMORY:
+            # Keep context pointed at the replacement, only after re-verifying it.
+            updated = await call_mcp_tool(
+                tool_name=MemoryIntent.RECALL.value,
+                args={"user_id": user_id, "category": category},
+            )
+            next_claim = (
+                verify_active_context_claim(context, updated.get("data", []), user_id)
+                if updated.get("success") is True
+                else None
+            )
+            if next_claim is None:
+                await clear_memory_context(user_id, conversation_id)
+            else:
+                await save_memory_context(
+                    user_id=user_id,
+                    conversation_id=conversation_id,
+                    claim=next_claim,
+                )
 
-    return {
-        "message": natural_response,
-        "actions": actions,
-    }
+    answer = await generate_natural_response(user_message=message, results=actions)
+    return {"message": answer, "actions": actions}
 
 
 async def resolve_pending_reply(
@@ -319,6 +444,38 @@ async def resolve_pending_reply(
         raise ValueError("Unexpected memory key for unresolved reply.")
 
     return parsed
+
+
+def is_independent_memory_request(
+    actions: list[Action],
+    context: dict,
+) -> bool:
+    if len(actions) != 1:
+        return bool(actions)
+
+    action = actions[0]
+
+    if action.intent in (
+        MemoryIntent.REMEMBER,
+        MemoryIntent.LOG_EVENT,
+    ):
+        return True
+
+    if action.intent == MemoryIntent.RECALL and action.recall_scope == "ALL":
+        return True
+
+    if (
+        action.intent
+        in (
+            MemoryIntent.RECALL,
+            MemoryIntent.MEMORY_HISTORY,
+            MemoryIntent.EXPLAIN,
+        )
+        and action.category is not None
+    ):
+        return action.category.value != context["category"]
+
+    return False
 
 
 async def filter_relevant_memories(
@@ -409,11 +566,8 @@ async def fallback_food_memory_recall(
 ) -> dict:
 
     recall_result = await call_mcp_tool(
-        tool_name=MemoryIntent.RECALL.value,
-        args={
-            "user_id": user_id,
-            "category": "food_preference",
-        },
+        tool_name="recall_all",
+        args={"user_id": user_id},
     )
 
     if not recall_result.get("success"):
@@ -805,9 +959,7 @@ async def _execute_explain(
     is_current = action.explain_scope == ExplainScope.CURRENT
 
     tool_name = (
-        MemoryIntent.RECALL.value
-        if is_current
-        else MemoryIntent.MEMORY_HISTORY.value
+        MemoryIntent.RECALL.value if is_current else MemoryIntent.MEMORY_HISTORY.value
     )
 
     result = await call_mcp_tool(
@@ -920,6 +1072,11 @@ async def execute_action(
             )
 
         case MemoryIntent.RECALL:
+            if action.recall_scope == "ALL":
+                return await call_mcp_tool(
+                    tool_name="recall_all",
+                    args={"user_id": user_id},
+                )
             return await call_mcp_tool(
                 tool_name=MemoryIntent.RECALL.value,
                 args={"user_id": user_id, "category": action.category.value},
@@ -1189,8 +1346,7 @@ async def _handle_pending_recall(
     candidate_claims = [
         claim
         for claim in recall_result.get("data", [])
-        if claim.get("memory_key") in allowed_keys
-        and claim.get("status") == "ACTIVE"
+        if claim.get("memory_key") in allowed_keys and claim.get("status") == "ACTIVE"
     ]
 
     resolution = await resolve_pending_reply(
@@ -1241,9 +1397,7 @@ async def _handle_pending_recall(
         ]
 
         natural_response = await generate_natural_response(
-            user_message=(
-                f"{pending['original_question']} User clarified: {message}"
-            ),
+            user_message=(f"{pending['original_question']} User clarified: {message}"),
             results=actions,
         )
 
@@ -1434,7 +1588,12 @@ async def _handle_no_actions(
             results = [
                 {
                     "intent": MemoryIntent.RECALL.value,
-                    "category": "food_preference",
+                    "category": (
+                        recall_result["data"][0]["category"]
+                        if recall_result.get("success")
+                        and len(recall_result.get("data", [])) == 1
+                        else "all"
+                    ),
                     "result": recall_result,
                 }
             ]
@@ -1449,12 +1608,20 @@ async def _handle_no_actions(
 
                 question = recall_result["error"]["message"]
 
-                if len(candidates) >= 2:
+                if (
+                    len(candidates) >= 2
+                    and len({c["category"] for c in candidates}) == 1
+                ):
                     await save_pending_clarification(
                         conversation_id=conversation_id,
                         user_id=user_id,
                         original_question=message,
-                        category="food_preference",
+                        category=(
+                            candidates[0]["category"]
+                            if candidates
+                            and len({c["category"] for c in candidates}) == 1
+                            else "all"
+                        ),
                         candidate_memory_keys=[
                             claim["memory_key"] for claim in candidates
                         ],
@@ -1507,6 +1674,8 @@ async def _handle_no_actions(
                         conversation_id=conversation_id,
                         claim=matched_claims[0],
                     )
+                else:
+                    await clear_memory_context(user_id, conversation_id)
 
             natural_response = await generate_natural_response(
                 user_message=message,
@@ -1579,19 +1748,8 @@ async def handle_user_message(
                 if recall_response is not None:
                     return recall_response
 
-        # Resolve follow-ups against the last retrieved memory.
-
-    if conversation_id is not None:
-        context_response = await try_contextual_recall(
-            user_id=user_id,
-            conversation_id=conversation_id,
-            message=message,
-        )
-
-        if context_response is not None:
-            return context_response
-
-    # 1. Extract memory actions from the user message.
+    # 1. Extract intent once before checking the previous memory reference.
+    # An explicit topic switch must not be served from stale conversation state.
 
     response = await asyncio.to_thread(
         client.responses.parse,
@@ -1613,6 +1771,16 @@ async def handle_user_message(
         raise ValueError("Intent extraction returned no result.")
 
     actions = response.output_parsed.actions
+
+    if conversation_id is not None:
+        context_response = await try_conversational_context(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            message=message,
+            actions=actions,
+        )
+        if context_response is not None:
+            return context_response
 
     logger.info(
         "CORRECTION DEBUG: message=%r actions=%s conversation_id=%s",
@@ -1659,7 +1827,13 @@ async def handle_user_message(
 
         # Validate the category before MCP operations.
 
-        if category is None and action.intent != MemoryIntent.LOG_EVENT:
+        if (
+            category is None
+            and action.intent != MemoryIntent.LOG_EVENT
+            and not (
+                action.intent == MemoryIntent.RECALL and action.recall_scope == "ALL"
+            )
+        ):
             result = {
                 "success": False,
                 "error": {
@@ -1709,6 +1883,26 @@ async def handle_user_message(
                 ),
             )
 
+            # A single successful REMEMBER also establishes the current referent.
+            if conversation_id is not None and action.intent == MemoryIntent.REMEMBER:
+                saved_claim = result.get("data")
+                if (
+                    len(actions) == 1
+                    and result.get("success") is True
+                    and isinstance(saved_claim, dict)
+                    and saved_claim.get("user_id") == user_id
+                    and saved_claim.get("category") == category
+                    and saved_claim.get("status") == "ACTIVE"
+                    and saved_claim.get("memory_key")
+                ):
+                    await save_memory_context(
+                        user_id=user_id,
+                        conversation_id=conversation_id,
+                        claim=saved_claim,
+                    )
+                else:
+                    await clear_memory_context(user_id, conversation_id)
+
             if action.intent == MemoryIntent.RECALL and result.get("success") is True:
                 raw_claims = result.get("data", [])
 
@@ -1731,21 +1925,41 @@ async def handle_user_message(
                     decision=decision,
                 )
 
-                if (
-                    conversation_id is not None
-                    and action.intent == MemoryIntent.RECALL
-                    and result.get("success") is True
-                ):
-                    matched_claims = result.get("data", [])
+                if action.recall_scope == "ALL":
+                    chosen_categories = {
+                        claim["category"]
+                        for claim in result.get("data", [])
+                        if claim.get("category")
+                    }
+                    category = (
+                        next(iter(chosen_categories))
+                        if len(chosen_categories) == 1
+                        else "all"
+                    )
 
-                    if len(matched_claims) == 1:
+                if conversation_id is not None:
+                    matched_claims = (
+                        result.get("data", []) if result.get("success") is True else []
+                    )
+                    if (
+                        len(matched_claims) == 1
+                        and matched_claims[0].get("status") == "ACTIVE"
+                        and matched_claims[0].get("user_id") == user_id
+                    ):
                         await save_memory_context(
                             user_id=user_id,
                             conversation_id=conversation_id,
                             claim=matched_claims[0],
                         )
+                    else:
+                        # No result / ambiguous result cannot leave a stale referent.
+                        await clear_memory_context(user_id, conversation_id)
 
-                if conversation_id is not None and decision.status == "AMBIGUOUS":
+                if (
+                    conversation_id is not None
+                    and decision.status == "AMBIGUOUS"
+                    and category != "all"
+                ):
                     await save_pending_clarification(
                         conversation_id=conversation_id,
                         user_id=user_id,
@@ -1761,6 +1975,9 @@ async def handle_user_message(
                     "FINAL RECALL RESULT:",
                     json.dumps(result, indent=2, default=str),
                 )
+
+            elif conversation_id is not None and action.intent == MemoryIntent.RECALL:
+                await clear_memory_context(user_id, conversation_id)
 
         except (ValueError, TimeoutError, SQLAlchemyError) as e:
             import traceback

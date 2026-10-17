@@ -38,6 +38,10 @@ RULES
 4. BROAD QUESTIONS
 - If the user explicitly asks for all memories within a
   category, select all relevant claims in that category.
+- For broad cross-category questions, select relevant claims across
+  all presented categories, not just food preferences.
+- For "What do I enjoy?", choose stored enjoyment/activity facts,
+  but do not turn a seat preference into an enjoyment claim.
 - If the user asks about a specific memory without enough
   detail to distinguish among multiple plausible memories,
   return AMBIGUOUS.

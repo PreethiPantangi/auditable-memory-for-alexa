@@ -76,7 +76,8 @@ async def recall_all(user_id: str) -> dict:
     if validation_error is not None:
         return validation_error
     return await memory_service.recall_all(
-        session_factory=SessionLocal, user_id=user_id,
+        session_factory=SessionLocal,
+        user_id=user_id,
     )
 
 

@@ -18,6 +18,13 @@ class EventInput(BaseModel):
     occurred_at: datetime | None = None
     request_id: UUID
 
+    @field_validator("occurred_at")
+    @classmethod
+    def validate_timezone(cls, value: datetime | None) -> datetime | None:
+        if value is not None and value.utcoffset() is None:
+            raise ValueError("Event timestamp must include a timezone")
+        return value
+
     @field_validator("user_id", "subject", "source_utterance")
     @classmethod
     def validate_nonempty(cls, value: str) -> str:

@@ -5,12 +5,28 @@ Automated results and manual checks are kept separate. A scenario listed under *
 ## Automated
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirementsdev.txt
 python -m pytest tests -q
 cd frontend && npm run build
 ```
 
-The backend suite is unit-level and mocks the database and OpenAI. It does not cover live database behavior, the hosted deployment, or concurrency.
+The October 21, 2026 run added 34 passing cases: 31 use real PostgreSQL (including MCP HTTP and signed browser/API session authorization), and 3 mock OpenAI extraction to exercise routing. See [inference-test-report.md](inference-test-report.md). Recommendation: **BACKEND VALIDATED — KEEP UI HIDDEN**.
+
+After repairing obsolete regression tests on October 21, the complete suite passes: **487 passed, zero failures/errors/skips**, including the previously uncollectable module and all 34 cooking tests. The initial validation's collection/setup/snapshot failures are resolved; see the report's regression-repair follow-up. The frontend formatting/lint/typecheck/build passed during the initial validation; it was not rerun for the test-only repair.
+
+### Disposable PostgreSQL configuration
+
+Use a separate local disposable cluster, never the demo/development database. On Windows with PostgreSQL binaries on PATH, initialize a fresh directory:
+
+```powershell
+initdb -D .test-postgres -U inference_test -A trust --no-locale --encoding=UTF8
+pg_ctl -D .test-postgres -l .test-postgres/server.log -o '-h 127.0.0.1 -p 55439' -w start
+$env:INFERENCE_TEST_ADMIN_URL='postgresql://inference_test@127.0.0.1:55439/postgres'
+.venv/Scripts/python.exe -m pytest tests/integration tests/test_cooking_orchestration.py -q
+pg_ctl -D .test-postgres -m fast -w stop
+```
+
+Trust authentication is for this disposable loopback cluster only. The admin role needs CREATE DATABASE permission. Each scenario creates an `inference_test_<random UUID>` database, applies the actual `scripts/scripts.sql`, uses unique synthetic identities and fixed timezone-aware dates, disposes connections and drops only that new database. No application DATABASE_URL fallback is allowed. Missing opt-in configuration produces BLOCKED pytest skips, never mock substitutes. The MCP fixture launches a real separate server with the test database and a generated bearer token on a dynamic port. API tests use signed synthetic session cookies and real downstream MCP calls.
 
 ## Manual scenarios
 
@@ -24,7 +40,7 @@ The backend suite is unit-level and mocks the database and OpenAI. It does not c
 
 ## Insight test plan
 
-The insight rule is `REPEATED_ADJUSTMENT` (see the README). The pure derivation function was exercised offline with synthetic events (no database). Database-backed behavior still needs to be run against a disposable database.
+The insight rule is `REPEATED_ADJUSTMENT` (see the README). T01–T10 and relevant edge cases now pass against disposable PostgreSQL; see the execution report for assertion-level evidence. The older checklist below is retained as a scenario reference, not an assertion that live chat or interactive UI testing was completed.
 
 ### Checked offline (derivation function only)
 
@@ -39,7 +55,7 @@ The insight rule is `REPEATED_ADJUSTMENT` (see the README). The pure derivation 
 | 3 events on 3 distinct **Pacific** days (6 PM, then two mornings) | **No candidate**, because dates are counted in UTC |
 | Subjects `lentil soup`, `lentil_soup`, `Lentil  Soup` | Only the lowercase/whitespace variants group together; the underscore variant does not |
 
-### To run against a disposable database
+### Scenario reference (executed coverage is in the report)
 
 | # | Scenario | Expected |
 |---|---|---|
@@ -64,7 +80,7 @@ Run I3 and I4 through the real chat path, not just the validator, because a unit
 
 ### Known behaviors to decide on before the demo
 
-1. **UTC dates.** Evenings in US time zones fall on the next UTC date, so three real cooking days can count as two. The derivation and the confirm-time check both use `.date()` of a UTC timestamp. A fix must change **both**, or confirming will fail even after a candidate appears. The simplest fix is a single application time zone constant applied in both places. For the demo, seed events at midday so dates are unambiguous.
+1. **UTC dates.** UTC dates are the intended rule, not local cooking days. The real asyncpg path passed UTC-midnight and offset tests. Snapshot validation takes raw `.date()` and relies on the adapter returning UTC; non-UTC values from another adapter remain a limitation. A supplied event timestamp must now include a timezone; omitted timestamps use server UTC time.
 2. **A single `WORSE` blocks permanently,** even a very old one, even after many newer `BETTER` events. This is conservative and consistent with the contradiction rule, but state it, and keep contradictory fixtures out of the demo user.
 3. **Reject is permanent** for that dish and adjustment, because the unique index prevents re-creation even with new evidence. State this wherever you describe rejection.
 4. **Dish names** are only lowercased and whitespace-collapsed. Differently spelled names split the evidence.

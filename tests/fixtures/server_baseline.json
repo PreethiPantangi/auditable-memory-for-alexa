@@ -56,6 +56,27 @@
       "meta": null
     },
     {
+      "name": "recall_all",
+      "title": null,
+      "description": "Retrieve all current claims for one authenticated demo user.",
+      "input_schema": {
+        "properties": {
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": ["user_id"],
+        "title": "recall_allArguments",
+        "type": "object"
+      },
+      "execution": null,
+      "output_schema": null,
+      "icons": null,
+      "annotations": null,
+      "meta": null
+    },
+    {
       "name": "remember",
       "title": null,
       "description": "",

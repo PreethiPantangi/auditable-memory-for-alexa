@@ -26,7 +26,7 @@ Repeated events may produce a candidate insight, but it must be explicitly confi
 
 **Trade-off:** Confirmation adds an interaction step, but avoids silently treating observed behavior as something the user said.
 
-**Current status:** The inference feature is implemented but **experimental**. End-to-end validation is incomplete (see [testing.md](testing.md)), and the cooking-insights navigation entry is hidden in the public demo. *(Update this paragraph if you re-enable it.)*
+**Current status:** The feature remains **experimental**. On October 21, 2026, 34 new checks passed, including real PostgreSQL, MCP HTTP, browser/API session ownership and deterministic orchestration routing. After repairing obsolete regression tests, the complete suite passes with 487 tests. Interactive browser/live-model validation remains incomplete (see [inference-test-report.md](inference-test-report.md)). Recommendation: **BACKEND VALIDATED — KEEP UI HIDDEN**. Cooking Insights navigation remains hidden in the public demo.
 
 ## Why keep insight rules deterministic?
 

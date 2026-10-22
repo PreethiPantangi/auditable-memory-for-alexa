@@ -25,6 +25,7 @@ EVENT_ARGS = {
 ARGUMENTS = {
     "server_status": {},
     "recall": {"user_id": "allowed", "category": "food_preference"},
+    "recall_all": {"user_id": "allowed"},
     "remember": {"user_id": "allowed", "category": "food_preference", "value": "soup", "source_utterance": "source"},
     "explain": {"claim_id": 1, "user_id": "allowed"},
     "correct_memory": {"user_id": "allowed", "category": "food_preference", "value": "new", "source_utterance": "source", "memory_key": "key"},
@@ -116,7 +117,7 @@ def trace_names(db):
 
 
 def operation_module(server, name):
-    if name in {"recall", "remember", "explain", "correct_memory", "forget", "memory_history"}:
+    if name in {"recall", "recall_all", "remember", "explain", "correct_memory", "forget", "memory_history"}:
         return getattr(server, "memory_service", server)
     if name in {"log_event", "list_events", "event_payload_hash"}:
         return getattr(server, "events_service", server)

@@ -12,11 +12,12 @@ def flow(orchestrator, monkeypatch):
     defaults = {
         "get_pending_clarification": None,
         "handle_pending_correction": None,
-        "try_contextual_recall": None,
+        "try_conversational_context": None,
         "call_mcp_tool": {"success": True, "data": []},
         "resolve_pending_reply": SimpleNamespace(status="NEW_REQUEST"),
         "clear_pending_clarification": None,
         "save_memory_context": None,
+        "clear_memory_context": None,
         "save_pending_correction": None,
         "save_pending_clarification": None,
         "resolve_correction_target": SimpleNamespace(status="MATCHED", memory_key="a"),
@@ -51,7 +52,7 @@ def pending_recall():
 
 
 def claim(key="a", status="ACTIVE"):
-    return {"memory_key": key, "status": status}
+    return {"memory_key": key, "status": status, "category": "food_preference", "user_id": "user"}
 
 
 def set_actions(flow, **overrides):
@@ -134,7 +135,7 @@ def test_pending_new_request_clears_before_context_and_intent_extraction(flow):
     assert run(flow) == {"message": "answer", "actions": []}
     assert names(flow) == [
         "get_pending_clarification", "call_mcp_tool", "resolve_pending_reply",
-        "clear_pending_clarification", "try_contextual_recall", "parse",
+        "clear_pending_clarification", "parse", "try_conversational_context",
         "generate_natural_response",
     ]
 
@@ -147,17 +148,21 @@ def test_pending_correction_keeps_its_precedence(flow, response):
     if response is None:
         assert result == {"message": "answer", "actions": []}
         assert names(flow) == ["get_pending_clarification", "handle_pending_correction",
-                               "try_contextual_recall", "parse", "generate_natural_response"]
+                               "parse", "try_conversational_context", "generate_natural_response"]
     else:
         assert result is response
         assert names(flow) == ["get_pending_clarification", "handle_pending_correction"]
 
 
-def test_context_response_precedes_intent_extraction(flow):
+def test_context_response_follows_intent_extraction_before_action_execution(flow):
     response = {"message": "context", "actions": []}
-    flow.module.try_contextual_recall.return_value = response
+    flow.module.try_conversational_context.return_value = response
     assert run(flow) is response
-    assert names(flow) == ["get_pending_clarification", "try_contextual_recall"]
+    assert names(flow) == ["get_pending_clarification", "parse", "try_conversational_context"]
+    flow.module.try_conversational_context.assert_awaited_once_with(
+        user_id="user", conversation_id="conversation", message="hello", actions=[],
+    )
+    flow.module.execute_action.assert_not_awaited()
 
 
 @pytest.mark.parametrize("value", [None, "", "  "])
@@ -170,7 +175,7 @@ def test_incomplete_correction_saves_target_without_executing_action(flow, value
             "success": False, "error": {"code": "CLARIFICATION_REQUIRED", "message": question},
         },
     }]}
-    assert names(flow) == ["get_pending_clarification", "try_contextual_recall", "parse",
+    assert names(flow) == ["get_pending_clarification", "parse", "try_conversational_context",
                            "call_mcp_tool", "resolve_correction_target", "save_pending_correction"]
     flow.module.save_pending_correction.assert_awaited_once_with(
         conversation_id="conversation", user_id="user", original_question="hello",
@@ -217,7 +222,7 @@ def test_incomplete_correction_early_returns(flow, case, expected):
 ])
 def test_no_actions_preserves_question_detection_and_prints(flow, capsys, message, recall):
     result = run(flow, message=message, conversation_id=None)
-    actions = ([{"intent": "recall", "category": "food_preference",
+    actions = ([{"intent": "recall", "category": "all",
                  "result": {"success": True, "data": []}}] if recall else [])
     assert result == {"message": "answer", "actions": actions}
     assert names(flow) == (["parse", "fallback_food_memory_recall", "generate_natural_response"]
@@ -264,7 +269,7 @@ def test_fallback_conflict_uses_first_supplied_conflict(flow, conflicts):
     result = {"success": False, "error": {"code": "CONFLICTING_MEMORIES"}, "conflicts": conflicts}
     flow.module.fallback_food_memory_recall.return_value = result
     response = run(flow, message="what recipe")
-    assert response["actions"] == [{"intent": "recall", "category": "food_preference", "result": result}]
+    assert response["actions"] == [{"intent": "recall", "category": "all", "result": result}]
     if conflicts:
         assert response["message"] == "I found conflicting saved information about salt for soup: more versus less. Which value should I use?"
         flow.module.generate_natural_response.assert_not_awaited()

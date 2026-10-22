@@ -36,6 +36,19 @@
               ],
               "default": null
             },
+            "recall_scope": {
+              "anyOf": [
+                {
+                  "enum": ["CATEGORY", "ALL"],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "default": null,
+              "title": "Recall Scope"
+            },
             "value": {
               "anyOf": [
                 {

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 import httpx2
 import pytest
 
-from tests.integration.test_cooking_lifecycle import pending, claims
+from tests.integration.test_cooking_lifecycle import claims, pending
 
 pytestmark = pytest.mark.anyio
 
@@ -12,10 +12,10 @@ async def test_t10_signed_browser_session_against_real_mcp(cooking_mcp, orchestr
     db = cooking_mcp.db
     monkeypatch.setenv("DEMO_ACCESS_PASSWORD", "synthetic-test-password-at-least-32-characters")
     monkeypatch.setenv("DEMO_SESSION_SECRET", "synthetic-test-session-secret-at-least-32-characters")
-    from client import api
-    from client import memory_api
-    from security import demo_access, demo_users
     from itsdangerous import URLSafeTimedSerializer
+
+    from client import api, memory_api
+    from security import demo_access, demo_users
     monkeypatch.setattr(demo_users, "ALLOWED_DEMO_USERS", frozenset({db.user, db.other}))
     monkeypatch.setattr(demo_access, "serializer", URLSafeTimedSerializer("synthetic-test-session-secret-32-characters", salt="adh-demo-access-v2"))
     chat = AsyncMock()

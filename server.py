@@ -1,6 +1,6 @@
 import logging
 import os
-import uuid as uuid
+import uuid
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
@@ -20,9 +20,7 @@ from insights.insights_service import (
 from insights.insights_service import (
     save_insight_candidates as save_candidates_service,
 )
-from insights.repeated_adjustment import (
-    derive_repeated_adjustments as derive_repeated_adjustments,
-)
+from insights.repeated_adjustment import derive_repeated_adjustments
 from responseformat import error_response, success_response
 from security.demo_users import is_allowed_demo_user
 from validators.event_validator import EventInput

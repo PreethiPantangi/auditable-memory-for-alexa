@@ -2,10 +2,8 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-import pytest
-
-from models.action import Action
 from memory_service import recall_all
+from models.action import Action
 
 
 def test_action_accepts_broad_recall_without_category():

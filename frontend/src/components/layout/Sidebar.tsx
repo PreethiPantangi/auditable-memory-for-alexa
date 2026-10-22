@@ -1,4 +1,4 @@
-import { MessageCircle, Database, LogOut /**, ChefHat**/ } from "lucide-react";
+import { MessageCircle, Database, LogOut, ChefHat } from "lucide-react";
 
 import AlexaPlusLogo from "../branding/AlexaPlusLogo";
 import { logoutDemo } from "../../services/demoAuthApi";
@@ -16,12 +16,11 @@ const navItems = [
     id: "memories",
     icon: Database,
   },
-  // ,
-  // {
-  //   label: "Cooking Insights",
-  //   id: "insights",
-  //   icon: ChefHat,
-  // },
+  {
+    label: "Cooking Insights",
+    id: "insights",
+    icon: ChefHat,
+  },
 ] as const;
 
 interface SidebarProps {

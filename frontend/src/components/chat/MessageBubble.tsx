@@ -5,23 +5,6 @@ import MemoryActionCard from "./MemoryActionCard";
 
 import type { ChatAction } from "../../types/chat";
 
-// Temporary test configuration.
-// Change to true to display a failed Forget action.
-const SHOW_FAILED_FORGET_TEST = false;
-
-// Remove this mock after testing.
-const failedForgetAction = {
-  intent: "forget",
-  category: "food_preference",
-  result: {
-    success: false,
-    error: {
-      code: "DATABASE_ERROR",
-      message: "Unable to deactivate memory. Please try again.",
-    },
-  },
-} as ChatAction;
-
 interface Message {
   id: string | number;
   role: "user" | "assistant";
@@ -73,20 +56,6 @@ export default function MessageBubble({
               onViewMemory={onViewMemory}
             />
           ))}
-
-        {/* Development-only failed Forget test */}
-        {isAssistant && import.meta.env.DEV && SHOW_FAILED_FORGET_TEST && (
-          <div className="mt-3">
-            <p className="mb-2 text-xs font-semibold text-amber-700">
-              DEV TEST — Simulated failed Forget
-            </p>
-
-            <MemoryActionCard
-              action={failedForgetAction}
-              onViewMemory={onViewMemory}
-            />
-          </div>
-        )}
       </div>
 
       {!isAssistant && (

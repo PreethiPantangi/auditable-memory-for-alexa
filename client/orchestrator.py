@@ -8,15 +8,15 @@ from dotenv import load_dotenv
 from openai import OpenAI
 from sqlalchemy.exc import SQLAlchemyError
 
+from client.context_reference import (
+    is_referential_mutation,
+    verify_active_context_claim,
+)
 from client.conversation_state import (
     clear_pending_clarification,
     get_pending_clarification,
     save_pending_clarification,
     save_pending_correction,
-)
-from client.context_reference import (
-    is_referential_mutation,
-    verify_active_context_claim,
 )
 from client.memory_context import (
     clear_memory_context,
@@ -59,10 +59,9 @@ from models.orchestration import (
     ClarificationResolution,
     ConflictAnalysis,
     ContextResolution,
-    ContextOperationResolution,
     ConversationDecision,
     CorrectionTargetResolution,
-    MemoryConflict as MemoryConflict,
+    MemoryConflict,
     MemoryRelevanceDecision,
     PendingCorrectionResolution,
     RecallRelevanceResult,
